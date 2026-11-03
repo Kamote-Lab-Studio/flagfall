@@ -25,7 +25,7 @@ export interface FileInfo { id: string; name: string; size: number; sha256: stri
 export interface Challenge extends ChallengeSummary {
   author: string; description: string; connection: string | null;
   minValue: number | null; decay: number | null; tags: string[];
-  themeFields: Record<string, unknown>; flags: Flag[]; hints: Hint[]; files: FileInfo[];
+  themeFields: Record<string, unknown>; themeFieldWarnings: string[]; otherThemeFields: string[]; flags: Flag[]; hints: Hint[]; files: FileInfo[];
 }
 
 export interface User {
@@ -64,3 +64,10 @@ export interface Dashboard {
 }
 
 export interface AuditEntry { id: string; actorId: string | null; actorName: string | null; action: string; target: string | null; details: string | null; ip: string | null; at: string }
+
+export type ChallengeFieldType = "text" | "number" | "boolean" | "select" | "location";
+export interface ChallengeField {
+  key: string; type: ChallengeFieldType; label: string; help?: string; required?: boolean;
+  options?: { value: string; label: string }[];
+}
+export interface ChallengeFields { theme: { id: string; name: string }; fields: ChallengeField[] }

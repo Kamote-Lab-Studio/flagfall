@@ -118,3 +118,14 @@ func setStart(t *testing.T, at time.Time) {
 		t.Fatal(err)
 	}
 }
+
+func TestCheckNotesUnusedThemeFields(t *testing.T) {
+	code, out := runCLI(t, "challenges", "check", filepath.Join("..", "..", "challenges", "sample"))
+	if code != 0 || !strings.Contains(out, "12 challenge(s) OK") ||
+		!strings.Contains(out, "note: The Amber Phosphor theme doesn't use theme_fields location (12 challenge(s))") {
+		t.Fatalf("check sample: %d %s", code, out)
+	}
+	if strings.Count(out, "location") != 1 {
+		t.Fatalf("the note should appear once:\n%s", out)
+	}
+}

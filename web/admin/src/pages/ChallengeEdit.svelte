@@ -3,9 +3,11 @@
   import { api, fieldErrors, message } from "../lib/api";
   import { href, navigate } from "../lib/router.svelte";
   import { can, notify } from "../lib/state.svelte";
-  import type { Challenge } from "../lib/types";
+  import type { Challenge, ChallengeFields } from "../lib/types";
+  import { fromInputs, toInputs, type FieldInput } from "../lib/themefields";
   import { bytes, fromLocalInput, toLocalInput } from "../lib/util";
   import Markdown from "../components/Markdown.svelte";
+  import ThemeFields from "../components/ThemeFields.svelte";
 
   let { id }: { id: string } = $props();
 
@@ -20,6 +22,8 @@
   let flag = $state({ kind: "exact", value: "" });
   let hints = $state<{ id?: string; cost: number; content: string; unlocks: number }[]>([]);
   let uploading = $state(false);
+  let themeInfo = $state<ChallengeFields>({ theme: { id: "", name: "" }, fields: [] });
+  let themeInputs = $state<Record<string, FieldInput>>({});
   const editable = $derived(can("author"));
 
   function fill(x: Challenge) {
@@ -31,10 +35,12 @@
       state: x.state, visibleFrom: toLocalInput(x.visibleFrom), tags: x.tags.join(", "), position: x.position,
     };
     hints = x.hints.map((h) => ({ ...h }));
+    themeInputs = toInputs(themeInfo.fields, x.themeFields);
   }
 
   async function load() {
     try {
+      themeInfo = await api.get<ChallengeFields>("/challenge-fields");
       fill(await api.get<Challenge>(`/challenges/${id}`));
     } catch (err) {
       error = message(err);
@@ -52,6 +58,7 @@
         minValue: form.dynamic ? form.minValue : null, decay: form.dynamic ? form.decay : null,
         state: form.state, visibleFrom: fromLocalInput(form.visibleFrom), position: form.position,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        themeFields: fromInputs(themeInfo.fields, themeInputs, c?.themeFields ?? {}),
       }));
       notify("Challenge saved.");
     } catch (err) {
@@ -138,6 +145,7 @@
   {#if c.state === "visible" && c.flags.length === 0}
     <div class="notice">This challenge is visible but has no flag, so nobody can solve it.</div>
   {/if}
+  {#each c.themeFieldWarnings as w (w)}<div class="notice">{w}</div>{/each}
 
   <form class="card" onsubmit={save}>
     <fieldset disabled={!editable}>
@@ -182,6 +190,13 @@
 
       <Markdown label="Description (Markdown)" bind:value={form.description} />
       {#if errors.description}<div class="field-error">{errors.description}</div>{/if}
+
+      {#if themeInfo.fields.length}
+        <ThemeFields fields={themeInfo.fields} themeName={themeInfo.theme.name} bind:values={themeInputs} {errors} />
+      {/if}
+      {#if c.otherThemeFields.length}
+        <p class="hint">Also stored for other themes: <code>{c.otherThemeFields.join(", ")}</code>. The {themeInfo.theme.name || "active"} theme doesn't show {c.otherThemeFields.length === 1 ? "it" : "them"}.</p>
+      {/if}
 
       {#if editable}
         <div class="actions">

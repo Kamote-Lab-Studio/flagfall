@@ -342,6 +342,11 @@ func (a *API) adminDashboard(w http.ResponseWriter, r *http.Request) error {
 		if c.State == "visible" && !hasFlag[c.ID] {
 			warnings = append(warnings, c.Name+" is visible but has no flag, so nobody can solve it.")
 		}
+		if c.State == "visible" {
+			if w := a.missingFieldsWarning(&c); w != "" {
+				warnings = append(warnings, w)
+			}
+		}
 	}
 	ev, err := a.store.LoadEvent(ctx)
 	if err != nil {

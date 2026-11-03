@@ -272,7 +272,12 @@ func serve(logOut io.Writer) error {
 
 	hub := live.NewHub()
 	defer hub.Close()
-	playerAPI := api.New(api.Options{Store: db, Config: cfg, Hub: hub, Files: files, Logger: logger})
+	theme, err := activeTheme()
+	if err != nil {
+		return err
+	}
+	playerAPI := api.New(api.Options{Store: db, Config: cfg, Hub: hub, Files: files, Logger: logger,
+		Theme: func() *themes.Theme { return theme }})
 	if code, required, err := playerAPI.PrepareSetup(ctx); err != nil {
 		return fmt.Errorf("check for an owner account: %w", err)
 	} else if required {
@@ -280,10 +285,6 @@ func serve(logOut io.Writer) error {
 			"url", cfg.PublicURL+"/admin", "setup_code", code)
 	}
 
-	theme, err := themes.Load(amberphosphor.FS)
-	if err != nil {
-		return fmt.Errorf("load the default theme: %w", err)
-	}
 	if err := theme.Register(ctx, db, time.Now()); err != nil {
 		return fmt.Errorf("register the default theme: %w", err)
 	}
@@ -392,4 +393,14 @@ func loadSample(ctx context.Context, cfg config.Config, db *store.Store, files *
 	fmt.Fprintf(out, "  owner (admin panel at /admin):    %s\n", seed.DemoOwnerEmail)
 	fmt.Fprintf(out, "  password for both:                %s\n", seed.DemoPassword)
 	return nil
+}
+
+// activeTheme is the player theme. Until the theme manager lands it is
+// always the bundled Amber Phosphor.
+func activeTheme() (*themes.Theme, error) {
+	t, err := themes.Load(amberphosphor.FS)
+	if err != nil {
+		return nil, fmt.Errorf("load the default theme: %w", err)
+	}
+	return t, nil
 }

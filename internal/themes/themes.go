@@ -35,6 +35,8 @@ type Manifest struct {
 	Version  string    `json:"version"`
 	Entry    string    `json:"entry"`
 	Settings []Setting `json:"settings"`
+	// ChallengeFields are extra per-challenge values the theme shows.
+	ChallengeFields []ChallengeField `json:"challengeFields"`
 }
 
 // Setting is one organizer-editable value declared by a theme.
@@ -66,6 +68,9 @@ func Load(fsys fs.FS) (*Theme, error) {
 	}
 	if m.ID == "" || m.Entry == "" || !fs.ValidPath(m.Entry) {
 		return nil, errors.New("theme.json: id and a relative entry path are required")
+	}
+	if err := checkFields(m.ChallengeFields); err != nil {
+		return nil, fmt.Errorf("theme.json: %w", err)
 	}
 	t := &Theme{Manifest: m, files: fsys, assetDir: path.Dir(m.Entry)}
 	if b, err := fs.ReadFile(fsys, m.Entry); err == nil {

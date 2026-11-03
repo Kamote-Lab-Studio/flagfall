@@ -11,7 +11,9 @@
   let creating = $state(false);
   let draft = $state({ slug: "", name: "", category: "", value: 100 });
   let errors = $state<Record<string, string>>({});
-  let problems = $state<{ path: string; message: string }[]>([]);
+  type Problem = { path: string; message: string };
+  let problems = $state<Problem[]>([]);
+  let importWarnings = $state<Problem[]>([]);
   let importing = $state(false);
 
   const shown = $derived(
@@ -45,9 +47,11 @@
     if (!file) return;
     importing = true;
     problems = [];
+    importWarnings = [];
     try {
-      const r = await api.upload<{ created: string[] | null; updated: string[] | null }>("/challenges/import", "file", file);
+      const r = await api.upload<{ created: string[] | null; updated: string[] | null; warnings?: Problem[] }>("/challenges/import", "file", file);
       notify(`Imported: ${r.created?.length ?? 0} new, ${r.updated?.length ?? 0} updated.`);
+      importWarnings = r.warnings ?? [];
       await load();
     } catch (err) {
       if (err instanceof ApiError && err.problems.length) problems = err.problems;
@@ -79,6 +83,12 @@
   <div class="notice bad">
     <p><b>The pack has problems; nothing was imported.</b></p>
     <ul>{#each problems as p, i (i)}<li><code>{p.path}</code>: {p.message}</li>{/each}</ul>
+  </div>
+{/if}
+{#if importWarnings.length}
+  <div class="notice">
+    <p><b>Imported. Notes about theme fields:</b></p>
+    <ul>{#each importWarnings as p, i (i)}<li>{#if p.path}<code>{p.path}</code>: {/if}{p.message}</li>{/each}</ul>
   </div>
 {/if}
 

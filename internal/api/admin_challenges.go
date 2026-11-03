@@ -23,10 +23,12 @@ import (
 	"github.com/flagfall/flagfall/internal/markdown"
 	"github.com/flagfall/flagfall/internal/scoring"
 	"github.com/flagfall/flagfall/internal/store"
+	"github.com/flagfall/flagfall/internal/themes"
 )
 
 func (a *API) mountAdminChallenges(r chi.Router) {
 	r.Get("/challenges", a.h(a.staff("support", a.adminListChallenges)))
+	r.Get("/challenge-fields", a.h(a.staff("support", a.adminChallengeFields)))
 	r.Post("/challenges", a.h(a.staff("author", a.adminCreateChallenge)))
 	r.Post("/challenges/import", a.h(a.staff("author", a.adminImportChallenges)))
 	r.Get("/challenges/{id}", a.h(a.staff("support", a.adminGetChallenge)))
@@ -80,16 +82,20 @@ type adminFileView struct {
 
 type adminChallengeView struct {
 	adminChallengeSummary
-	Author      string          `json:"author"`
-	Description string          `json:"description"`
-	Connection  *string         `json:"connection"`
-	MinValue    *int            `json:"minValue"`
-	Decay       *int            `json:"decay"`
-	Tags        []string        `json:"tags"`
-	ThemeFields map[string]any  `json:"themeFields"`
-	Flags       []adminFlagView `json:"flags"`
-	Hints       []adminHintView `json:"hints"`
-	Files       []adminFileView `json:"files"`
+	Author      string         `json:"author"`
+	Description string         `json:"description"`
+	Connection  *string        `json:"connection"`
+	MinValue    *int           `json:"minValue"`
+	Decay       *int           `json:"decay"`
+	Tags        []string       `json:"tags"`
+	ThemeFields map[string]any `json:"themeFields"`
+	// ThemeFieldWarnings: required fields missing, keys the theme ignores.
+	ThemeFieldWarnings []string `json:"themeFieldWarnings"`
+	// OtherThemeFields are stored keys the active theme doesn't use.
+	OtherThemeFields []string        `json:"otherThemeFields"`
+	Flags            []adminFlagView `json:"flags"`
+	Hints            []adminHintView `json:"hints"`
+	Files            []adminFileView `json:"files"`
 }
 
 func (a *API) challengeStats(ctx context.Context) (map[int64]int, error) {
@@ -169,6 +175,7 @@ func (a *API) adminChallengeDetail(ctx context.Context, c *store.Challenge) (*ad
 	}
 	_ = json.Unmarshal([]byte(c.Tags), &v.Tags)
 	_ = json.Unmarshal([]byte(c.ThemeFields), &v.ThemeFields)
+	v.ThemeFieldWarnings, v.OtherThemeFields = a.themeFieldWarnings(c)
 
 	var fl []store.Flag
 	if err := a.store.DB.NewSelect().Model(&fl).Where("challenge_id = ?", c.ID).Order("id").Scan(ctx); err != nil {
@@ -295,7 +302,16 @@ func (a *API) applyChallengePatch(ctx context.Context, p *patch, c *store.Challe
 		if tf == nil {
 			tf = map[string]any{}
 		}
+		// Values for the active theme's fields must fit their type. Other keys
+		// are kept for other themes; missing required ones are warnings.
+		_, _, fields := a.activeFields()
+		for key, msg := range themes.CheckFields(fields, tf).Invalid {
+			p.fail("themeFields."+key, msg)
+		}
 		b, _ := json.Marshal(tf)
+		if len(b) > 16<<10 {
+			p.fail("themeFields", "Theme fields can take at most 16 KB.")
+		}
 		c.ThemeFields = string(b)
 	}
 	if v, ok := p.intRange("position", 0, 100_000); ok {
@@ -647,6 +663,13 @@ func (a *API) adminImportChallenges(w http.ResponseWriter, r *http.Request) erro
 	}
 	specs, err := challenges.LoadArchive(zr)
 	var problems challenges.Problems
+	var tfc challenges.ThemeFieldCheck
+	_, themeName, fields := a.activeFields()
+	if err == nil {
+		if tfc = challenges.CheckThemeFields(specs, fields); len(tfc.Problems) > 0 {
+			err = tfc.Problems
+		}
+	}
 	if errors.As(err, &problems) {
 		list := make([]map[string]string, len(problems))
 		for i, p := range problems {
@@ -674,7 +697,14 @@ func (a *API) adminImportChallenges(w http.ResponseWriter, r *http.Request) erro
 	if res.Updated == nil {
 		res.Updated = []string{}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"created": res.Created, "updated": res.Updated})
+	warnList := []map[string]string{}
+	for _, p := range tfc.Warnings {
+		warnList = append(warnList, map[string]string{"path": p.Path, "message": p.Message})
+	}
+	if note := tfc.UnusedNote(themeName); note != "" {
+		warnList = append(warnList, map[string]string{"path": "", "message": note})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"created": res.Created, "updated": res.Updated, "warnings": warnList})
 	return nil
 }
 

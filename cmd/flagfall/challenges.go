@@ -115,6 +115,9 @@ func checkCmd(target string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if err := checkThemeFields(specs, out); err != nil {
+		return err
+	}
 	fmt.Fprintf(out, "%d challenge(s) OK: %s\n", len(specs), slugs(specs))
 	return nil
 }
@@ -122,6 +125,9 @@ func checkCmd(target string, out io.Writer) error {
 func importCmd(target string, yes, prune bool, out io.Writer) error {
 	specs, err := loadSpecs(target)
 	if err != nil {
+		return err
+	}
+	if err := checkThemeFields(specs, out); err != nil {
 		return err
 	}
 	ctx := context.Background()
@@ -222,4 +228,25 @@ func slugs(specs []*challenges.Spec) string {
 		s[i] = sp.Slug
 	}
 	return strings.Join(s, ", ")
+}
+
+// checkThemeFields checks theme_fields against the active theme: wrong
+// types fail, missing required fields and unused keys are printed.
+func checkThemeFields(specs []*challenges.Spec, out io.Writer) error {
+	theme, err := activeTheme()
+	if err != nil {
+		return err
+	}
+	m := theme.Manifest
+	c := challenges.CheckThemeFields(specs, m.ChallengeFields)
+	if len(c.Problems) > 0 {
+		return c.Problems
+	}
+	for _, w := range c.Warnings {
+		fmt.Fprintln(out, "warning: "+w.String())
+	}
+	if note := c.UnusedNote(m.Name); note != "" {
+		fmt.Fprintln(out, "note: "+note)
+	}
+	return nil
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/flagfall/flagfall/internal/ratelimit"
 	"github.com/flagfall/flagfall/internal/scoring"
 	"github.com/flagfall/flagfall/internal/store"
+	"github.com/flagfall/flagfall/internal/themes"
 )
 
 // Mailer sends account emails. By default the API uses the SMTP settings
@@ -46,6 +47,7 @@ type API struct {
 	boards *scoring.Cache
 	mailer Mailer
 	files  *blobs.Store
+	theme  func() *themes.Theme
 	// httpClient makes outgoing calls (Discord webhooks).
 	httpClient *http.Client
 	log        *slog.Logger
@@ -70,6 +72,9 @@ type Options struct {
 	Mailer Mailer
 	// Files stores challenge files; nil means DataDir/files on disk.
 	Files *blobs.Store
+	// Theme returns the active player theme, for its challenge fields; nil
+	// means a theme without any.
+	Theme func() *themes.Theme
 	// HTTPClient makes outgoing calls; tests swap its transport.
 	HTTPClient *http.Client
 	Logger     *slog.Logger
@@ -104,6 +109,7 @@ func New(o Options) *API {
 	if a.mailer == nil {
 		a.mailer = settingsMailer{a}
 	}
+	a.theme = o.Theme
 	if a.files = o.Files; a.files == nil {
 		a.files = blobs.Local(blobs.LocalDir(o.Config.DataDir))
 	}
