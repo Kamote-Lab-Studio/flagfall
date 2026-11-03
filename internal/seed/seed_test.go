@@ -47,19 +47,55 @@ func TestSampleMatchesTheDesigns(t *testing.T) {
 	if ev.State(time.Now()) != store.StateRunning {
 		t.Errorf("sample event state = %s", ev.State(time.Now()))
 	}
-	if d := ev.ParsedSettings().DemoAccount; d == nil || d.Email != seed.DemoEmail || d.Password != seed.DemoPassword {
-		t.Errorf("sample event should advertise the demo account, got %+v", d)
+	// The setup wizard loads the sample too, so on its own it adds no
+	// public logins.
+	if st := ev.ParsedSettings(); st.DemoAccount != nil || st.DemoAdmin != nil {
+		t.Errorf("Sample alone advertised demo logins: %+v", st)
 	}
-
-	var demo store.User
-	if err := s.DB.NewSelect().Model(&demo).Where("email_key = ?", seed.DemoEmail).Scan(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if ok, _ := auth.CheckPassword(demo.PasswordHash, seed.DemoPassword); !ok {
-		t.Error("demo password doesn't work")
+	if signsIn(t, s, seed.DemoEmail) {
+		t.Error("Sample alone gave the demo player a known password")
 	}
 
 	if _, err := seed.Sample(ctx, s, secret, t.TempDir(), time.Now()); !errors.Is(err, seed.ErrNotEmpty) {
 		t.Errorf("second seed: err = %v, want ErrNotEmpty", err)
 	}
+}
+
+func TestDemoLogins(t *testing.T) {
+	s := storetest.New(t)
+	ctx := context.Background()
+	if _, err := seed.Sample(ctx, s, []byte(strings.Repeat("s", 32)), t.TempDir(), time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := seed.DemoLogins(ctx, s, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	for _, email := range []string{seed.DemoEmail, seed.DemoOwnerEmail} {
+		if !signsIn(t, s, email) {
+			t.Errorf("%s can't sign in with the demo password", email)
+		}
+	}
+	var owner store.User
+	if err := s.DB.NewSelect().Model(&owner).Where("email_key = ?", seed.DemoOwnerEmail).Scan(ctx); err != nil || owner.Role != "owner" || owner.TeamID != nil {
+		t.Errorf("demo owner = %+v, %v", owner, err)
+	}
+	ev, _ := s.LoadEvent(ctx)
+	st := ev.ParsedSettings()
+	if st.DemoAccount == nil || st.DemoAccount.Email != seed.DemoEmail || st.DemoAdmin == nil || st.DemoAdmin.Email != seed.DemoOwnerEmail {
+		t.Errorf("settings = %+v", st)
+	}
+	// Never on an install that already has an owner.
+	if err := seed.DemoLogins(ctx, s, time.Now()); !errors.Is(err, seed.ErrHasOwner) {
+		t.Errorf("second DemoLogins: err = %v, want ErrHasOwner", err)
+	}
+}
+
+func signsIn(t *testing.T, s *store.Store, email string) bool {
+	t.Helper()
+	var u store.User
+	if err := s.DB.NewSelect().Model(&u).Where("email_key = ?", email).Scan(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	ok, _ := auth.CheckPassword(u.PasswordHash, seed.DemoPassword)
+	return ok
 }

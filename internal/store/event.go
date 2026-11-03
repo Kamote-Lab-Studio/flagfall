@@ -75,6 +75,8 @@ type EventSettings struct {
 	// DemoAccount is shown on the sign-in page. Only `flagfall seed sample`
 	// sets it; real events never have one.
 	DemoAccount *DemoAccount `json:"demoAccount,omitempty"`
+	// DemoAdmin is shown on the admin sign-in page. Same rules.
+	DemoAdmin *DemoAccount `json:"demoAdmin,omitempty"`
 }
 
 // DemoAccount is a public, throwaway login for demo installs.

@@ -11,10 +11,12 @@
   type View = "loading" | "setup" | "sign-in" | "not-staff" | "ready" | "error";
   let view = $state<View>("loading");
   let error = $state("");
+  let demo = $state<{ email: string; password: string } | null>(null);
 
   async function load() {
     try {
-      const setup = await api.get<{ required: boolean }>("/setup");
+      const setup = await api.get<{ required: boolean; demoAccount: { email: string; password: string } | null }>("/setup");
+      demo = setup.demoAccount;
       if (setup.required) {
         view = "setup";
         return;
@@ -48,7 +50,7 @@
 {:else if view === "setup"}
   <Setup onDone={load} />
 {:else if view === "sign-in"}
-  <SignIn onDone={load} />
+  <SignIn onDone={load} {demo} />
 {:else if view === "not-staff"}
   <main class="center">
     <h1>Staff only</h1>

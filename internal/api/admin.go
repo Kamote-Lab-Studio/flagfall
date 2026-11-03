@@ -245,7 +245,15 @@ func (a *API) getSetup(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusOK, map[string]bool{"required": required})
+	// demoAccount is null except on demo installs (flagfall seed sample),
+	// where the admin sign-in page offers the demo owner login.
+	var demo *store.DemoAccount
+	if !required {
+		if ev, err := a.store.LoadEvent(r.Context()); err == nil {
+			demo = ev.ParsedSettings().DemoAdmin
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"required": required, "demoAccount": demo})
 	return nil
 }
 
@@ -317,7 +325,7 @@ func (a *API) postSetup(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	// Set the name last, since the sample overwrites it. Installs set up
-	// through the wizard don't advertise the sample's demo login.
+	// through the wizard never get the demo logins (seed.DemoLogins).
 	if _, err := a.store.DB.NewUpdate().Model((*store.Event)(nil)).
 		Set("name = ?", eventName).Set("settings = ?", "{}").Set("updated_at = ?", a.now().UTC()).
 		Where("id = 1").Exec(ctx); err != nil {

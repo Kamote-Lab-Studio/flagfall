@@ -237,3 +237,24 @@ func (e *env) subscribe() (<-chan string, func()) {
 	}
 	return out, cancel
 }
+
+func TestSetupOffersDemoOwnerOnlyOnDemoInstalls(t *testing.T) {
+	e := newEnv(t)
+	e.staff("ada", "admin") // creates an owner, so setup is done
+	anon := e.client()
+	if r := anon.must(200, "GET", "/admin/api/v1/setup", nil); r.body["demoAccount"] != nil {
+		t.Fatalf("normal install offers a demo login: %s", r.raw)
+	}
+	settings := `{"demoAdmin":{"email":"organizer@sample.invalid","password":"pw"}}`
+	if _, err := e.store.DB.NewUpdate().Model((*store.Event)(nil)).Set("settings = ?", settings).Where("id = 1").Exec(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	r := anon.must(200, "GET", "/admin/api/v1/setup", nil)
+	if r.str("demoAccount", "email") != "organizer@sample.invalid" {
+		t.Fatalf("setup = %s", r.raw)
+	}
+	// The player API doesn't advertise the owner login.
+	if ev := anon.must(200, "GET", "/api/v1/event", nil); strings.Contains(string(ev.raw), "organizer") {
+		t.Fatalf("player event leaks the demo owner: %s", ev.raw)
+	}
+}

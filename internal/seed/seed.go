@@ -29,11 +29,15 @@ var teamsJSON []byte
 //go:embed data/rules.md
 var rulesMD string
 
-// DemoEmail and DemoPassword sign in as the captain of null_pointer, the
-// team shown as "Your team" in the designs.
+// Demo logins, created by DemoLogins for `flagfall seed sample` only.
+// DemoEmail is the captain of null_pointer, the team shown as "Your team"
+// in the designs; DemoOwnerEmail is an owner for trying the admin panel.
+// Both use DemoPassword.
 const (
-	DemoEmail    = "kaito@sample.invalid"
-	DemoPassword = "flagfall-demo-password"
+	DemoEmail      = "kaito@sample.invalid"
+	DemoOwnerName  = "organizer"
+	DemoOwnerEmail = "organizer@sample.invalid"
+	DemoPassword   = "flagfall-demo-password"
 )
 
 // ErrNotEmpty means the database already has an event in it.
@@ -101,17 +105,6 @@ func Sample(ctx context.Context, db *store.Store, secret []byte, filesDir string
 	if err != nil {
 		return sum, err
 	}
-	demoHash, err := auth.HashPassword(DemoPassword)
-	if err != nil {
-		return sum, err
-	}
-
-	// The sign-in page shows this login so visitors can try the demo.
-	demoSettings, err := json.Marshal(store.EventSettings{DemoAccount: &store.DemoAccount{Email: DemoEmail, Password: DemoPassword}})
-	if err != nil {
-		return sum, err
-	}
-
 	// 33h38m into a 48-hour event, matching the "14:22:07 left" in the designs.
 	start := now.Add(-(33*time.Hour + 38*time.Minute))
 	end := start.Add(48 * time.Hour)
@@ -122,7 +115,6 @@ func Sample(ctx context.Context, db *store.Store, secret []byte, filesDir string
 			Set("name = ?", "Flagfall CTF").
 			Set("starts_at = ?", start).Set("ends_at = ?", end).Set("freeze_at = ?", freeze).
 			Set("max_team_size = 4").Set("registration_open = ?", true).Set("updated_at = ?", now).
-			Set("settings = ?", string(demoSettings)).
 			Where("id = 1").Exec(ctx); err != nil {
 			return err
 		}
@@ -183,14 +175,10 @@ func Sample(ctx context.Context, db *store.Store, secret []byte, filesDir string
 
 			userID := map[string]int64{}
 			for _, fp := range ft.Players {
-				hash := lockedHash
 				email := strings.ToLower(fp.Name) + "@sample.invalid"
-				if email == DemoEmail {
-					hash = demoHash
-				}
 				u := &store.User{
 					Name: fp.Name, NameKey: strings.ToLower(fp.Name), Email: email, EmailKey: email,
-					PasswordHash: hash, Role: "player", TeamID: &team.ID, Country: &country,
+					PasswordHash: lockedHash, Role: "player", TeamID: &team.ID, Country: &country,
 					VerifiedAt: &created, CreatedAt: created.UTC(),
 				}
 				if _, err := tx.NewInsert().Model(u).Exec(ctx); err != nil {
@@ -244,6 +232,53 @@ func Sample(ctx context.Context, db *store.Store, secret []byte, filesDir string
 		return nil
 	})
 	return sum, err
+}
+
+// ErrHasOwner means DemoLogins was asked to add a demo owner to an install
+// that already has one, i.e. a real event. Public owner logins must never
+// end up there.
+var ErrHasOwner = errors.New("the database already has an owner; demo logins are only added to fresh sample installs")
+
+// DemoLogins makes the sample event usable as a public demo: it gives the
+// sample player DemoEmail a known password, adds an owner account
+// (DemoOwnerEmail), and advertises both logins on the sign-in pages.
+// Run it after Sample, and only for demo installs: anyone who reads the
+// sign-in page can sign in as owner.
+func DemoLogins(ctx context.Context, db *store.Store, now time.Time) error {
+	if n, err := db.DB.NewSelect().Model((*store.User)(nil)).Where("role = 'owner'").Count(ctx); err != nil {
+		return err
+	} else if n > 0 {
+		return ErrHasOwner
+	}
+	hash, err := auth.HashPassword(DemoPassword)
+	if err != nil {
+		return err
+	}
+	login := func(email string) *store.DemoAccount { return &store.DemoAccount{Email: email, Password: DemoPassword} }
+	settings, err := json.Marshal(store.EventSettings{DemoAccount: login(DemoEmail), DemoAdmin: login(DemoOwnerEmail)})
+	if err != nil {
+		return err
+	}
+	now = now.UTC().Truncate(time.Second)
+	return db.DB.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		res, err := tx.NewUpdate().Model((*store.User)(nil)).Set("password_hash = ?", hash).
+			Where("email_key = ?", DemoEmail).Exec(ctx)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n != 1 {
+			return fmt.Errorf("demo player %s not found; load the sample event first", DemoEmail)
+		}
+		owner := &store.User{
+			Name: DemoOwnerName, NameKey: strings.ToLower(DemoOwnerName), Email: DemoOwnerEmail, EmailKey: DemoOwnerEmail,
+			PasswordHash: hash, Role: "owner", VerifiedAt: &now, CreatedAt: now,
+		}
+		if _, err := tx.NewInsert().Model(owner).Exec(ctx); err != nil {
+			return fmt.Errorf("demo owner: %w", err)
+		}
+		_, err = tx.NewUpdate().Model((*store.Event)(nil)).Set("settings = ?", string(settings)).Where("id = 1").Exec(ctx)
+		return err
+	})
 }
 
 // boardOrder is the challenge order on the designed board.

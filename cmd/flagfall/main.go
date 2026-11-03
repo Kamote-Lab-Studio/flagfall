@@ -192,6 +192,15 @@ func seedSample(out io.Writer) error {
 		return err
 	}
 	fmt.Fprintf(out, "Loaded the sample event: %d challenges, %d teams, %d players, %d solves.\n\n", sum.Challenges, sum.Teams, sum.Players, sum.Solves)
-	fmt.Fprintf(out, "Sign in as the captain of null_pointer to try it:\n  email:    %s\n  password: %s\n", seed.DemoEmail, seed.DemoPassword)
+	if err := seed.DemoLogins(ctx, db, time.Now()); errors.Is(err, seed.ErrHasOwner) {
+		fmt.Fprintln(out, "This install already has an owner, so no public demo logins were added.")
+		return nil
+	} else if err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Demo logins (shown on the sign-in pages; anyone can use them):\n")
+	fmt.Fprintf(out, "  player (captain of null_pointer): %s\n", seed.DemoEmail)
+	fmt.Fprintf(out, "  owner (admin panel at /admin):    %s\n", seed.DemoOwnerEmail)
+	fmt.Fprintf(out, "  password for both:                %s\n", seed.DemoPassword)
 	return nil
 }
