@@ -86,7 +86,7 @@
       {:else if route.path === "/scoreboard"}
         <Scoreboard />
       {:else if route.path === "/submissions"}
-        <Submissions />
+        {#key route.query.toString()}<Submissions />{/key}
       {:else if route.path === "/pages"}
         <Pages />
       {:else if route.path === "/appearance" && can("admin")}

@@ -57,6 +57,13 @@ export interface Submission {
   correct: boolean; submitted: string; ip: string | null; submittedAt: string;
 }
 
+export interface FairPlayAlert {
+  id: string; kind: "shared-flag" | "rate-limit"; challengeId: string; challengeName: string;
+  teams: string[]; teamIds: string[]; count: number; limit: number; spanSeconds: number; at: string;
+}
+
+export interface SubmissionSummary { total: number; correct: number; incorrect: number; alerts: FairPlayAlert[] }
+
 export interface Dashboard {
   state: string; playersOnline: number; teams: number; players: number; submissions: number;
   submissionsPerMinute: number; solves: number; warnings: string[];

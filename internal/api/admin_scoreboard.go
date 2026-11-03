@@ -21,6 +21,7 @@ func (a *API) mountAdminScoreboard(r chi.Router) {
 	r.Delete("/scoreboard/adjustments/{id}", a.h(a.staff("admin", a.adminDeleteAdjustment)))
 	r.Get("/scoreboard/export/ctftime", a.h(a.staff("support", a.adminCTFtime)))
 	r.Get("/submissions", a.h(a.staff("support", a.adminSubmissions)))
+	r.Get("/submissions/summary", a.h(a.staff("support", a.adminSubmissionsSummary)))
 	r.Get("/dashboard", a.h(a.staff("support", a.adminDashboard)))
 }
 

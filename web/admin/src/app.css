@@ -181,6 +181,19 @@ button.small { min-height: 30px; padding: 0 10px; font-size: 13px; }
 .tabs [aria-selected="true"], .tabs [aria-current="page"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .tabs [aria-selected="true"]:hover, .tabs [aria-current="page"]:hover { color: var(--accent-ink); }
 
+/* Pill filters (Submissions). */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filters input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.filters label { min-height: 40px; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; border: 1px solid var(--line); border-radius: 20px; color: var(--text-2); font-size: 14px; font-weight: 500; cursor: pointer; }
+.filters label > span { display: inline; margin: 0; color: inherit; font-size: inherit; font-weight: inherit; opacity: 0.8; }
+.feed-table td a { font-weight: 400; }
+.filters input:checked + label { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.filters input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.accent2 { color: var(--accent-2); }
+button.link { min-height: 0; padding: 0; border: 0; background: none; font-weight: 400; }
+button.link:hover:not(:disabled) { color: var(--accent); }
+.toolbar .filters { margin-right: auto; }
+
 /* ----------------------------------------------------------------- tables */
 
 .table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }

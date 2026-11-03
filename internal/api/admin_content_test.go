@@ -130,6 +130,10 @@ func TestAdminScoreboardAndAdjustments(t *testing.T) {
 	if wrong := admin.must(200, "GET", "/admin/api/v1/submissions?correct=false", nil); len(wrong.list) != 1 || wrong.list[0].(map[string]any)["submitted"] != "flag{wrong}" {
 		t.Fatalf("filtered = %s", wrong.raw)
 	}
+	sum := admin.must(200, "GET", "/admin/api/v1/submissions/summary", nil)
+	if sum.body["total"] != 2.0 || sum.body["correct"] != 1.0 || sum.body["incorrect"] != 1.0 || len(sum.body["alerts"].([]any)) != 0 {
+		t.Fatalf("summary = %s", sum.raw)
+	}
 
 	dash := admin.must(200, "GET", "/admin/api/v1/dashboard", nil)
 	if dash.body["teams"] != 1.0 || dash.body["solves"] != 1.0 || dash.body["submissions"] != 2.0 {
