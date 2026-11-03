@@ -15,6 +15,7 @@
   import Submissions from "../pages/Submissions.svelte";
   import Pages from "../pages/Pages.svelte";
   import Audit from "../pages/Audit.svelte";
+  import Data from "../pages/Data.svelte";
 
   let { onSignOut }: { onSignOut: () => void } = $props();
 
@@ -28,6 +29,7 @@
     { path: "/scoreboard", label: "Scoreboard", role: "support" },
     { path: "/submissions", label: "Submissions", role: "support" },
     { path: "/pages", label: "Pages", role: "support" },
+    { path: "/data", label: "Data", role: "admin" },
     { path: "/audit", label: "Audit log", role: "admin" },
   ];
 
@@ -87,6 +89,8 @@
       <Submissions />
     {:else if route.path === "/pages"}
       <Pages />
+    {:else if route.path === "/data" && can("admin")}
+      <Data />
     {:else if route.path === "/audit" && can("admin")}
       <Audit />
     {:else}

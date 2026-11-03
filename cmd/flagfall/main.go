@@ -2,6 +2,7 @@
 package main
 
 import (
+	"archive/zip"
 	"context"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -19,6 +21,7 @@ import (
 
 	"github.com/flagfall/flagfall/internal/adminui"
 	"github.com/flagfall/flagfall/internal/api"
+	"github.com/flagfall/flagfall/internal/backup"
 	"github.com/flagfall/flagfall/internal/config"
 	"github.com/flagfall/flagfall/internal/live"
 	"github.com/flagfall/flagfall/internal/seed"
@@ -38,6 +41,8 @@ Usage:
 Commands:
   serve        Start the server
   seed sample  Load the sample event (12 challenges, 312 teams) into an empty install
+  backup <file>   Write a backup (database and uploaded files) to a .zip; "-" for stdout
+  restore <file>  Restore a backup into an empty install (--replace to overwrite one; stop the server first)
   healthcheck  Exit 0 if the server on FLAGFALL_ADDR answers /healthz (for containers)
   version      Print the version and exit
   help         Show this help
@@ -49,6 +54,90 @@ Configuration comes from environment variables or flagfall.toml (see docs/dev/co
   FLAGFALL_DATABASE_URL  database URL (default: SQLite in the data directory)
   FLAGFALL_SEED_SAMPLE   "true" loads the sample event and demo logins on the first serve (demos only)
 `
+
+func backupCmd(file string, stdout, stderr io.Writer) error {
+	ctx := context.Background()
+	cfg, db, err := setup(ctx)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	var w io.Writer = stdout
+	var f *os.File
+	if file != "-" {
+		// Write next to the target and rename, so a failed run leaves no half file.
+		f, err = os.CreateTemp(filepath.Dir(file), ".flagfall-backup-*")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(f.Name())
+		defer f.Close()
+		w = f
+	}
+	m, err := backup.Write(ctx, db, api.FilesDir(cfg.DataDir), version.Version, time.Now(), w)
+	if err != nil {
+		return err
+	}
+	if f != nil {
+		if err := f.Close(); err != nil {
+			return err
+		}
+		if err := os.Rename(f.Name(), file); err != nil {
+			return err
+		}
+	}
+	total := 0
+	for _, n := range m.Rows {
+		total += n
+	}
+	fmt.Fprintf(stderr, "Backed up %d rows and %d files", total, m.Files)
+	if file != "-" {
+		fmt.Fprintf(stderr, " to %s", file)
+	}
+	fmt.Fprintln(stderr, ".")
+	if len(m.MissingFiles) > 0 {
+		fmt.Fprintf(stderr, "Warning: %d challenge files were missing from storage and aren't in the backup.\n", len(m.MissingFiles))
+	}
+	return nil
+}
+
+func restoreCmd(file string, replace bool, out io.Writer) error {
+	ctx := context.Background()
+	cfg, db, err := setup(ctx)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	if !replace {
+		for _, m := range []any{(*store.User)(nil), (*store.Challenge)(nil)} {
+			if n, err := db.DB.NewSelect().Model(m).Count(ctx); err != nil {
+				return err
+			} else if n > 0 {
+				return errors.New("this install isn't empty; pass --replace to overwrite everything in it")
+			}
+		}
+	}
+	f, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	zr, err := zip.NewReader(f, st.Size())
+	if err != nil {
+		return fmt.Errorf("%s isn't a Flagfall backup (.zip): %w", file, err)
+	}
+	m, err := backup.Restore(ctx, db, api.FilesDir(cfg.DataDir), zr)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Restored the backup from %s (%d teams, %d users, %d files). Everyone will need to sign in again.\n",
+		m.CreatedAt.Format(time.RFC1123), m.Rows["teams"], m.Rows["users"], m.Files)
+	return nil
+}
 
 func truthy(v string) bool { return v == "1" || strings.EqualFold(v, "true") }
 
@@ -100,6 +189,37 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 2
 		}
 		if err := seedSample(stdout); err != nil {
+			fmt.Fprintln(stderr, "error:", err)
+			return 1
+		}
+		return 0
+	case "backup":
+		if len(args) != 2 {
+			fmt.Fprintln(stderr, "usage: flagfall backup <file.zip | ->")
+			return 2
+		}
+		if err := backupCmd(args[1], stdout, stderr); err != nil {
+			fmt.Fprintln(stderr, "error:", err)
+			return 1
+		}
+		return 0
+	case "restore":
+		file, replace := "", false
+		for _, a := range args[1:] {
+			if a == "--replace" {
+				replace = true
+			} else if file == "" {
+				file = a
+			} else {
+				file = ""
+				break
+			}
+		}
+		if file == "" {
+			fmt.Fprintln(stderr, "usage: flagfall restore [--replace] <file.zip>")
+			return 2
+		}
+		if err := restoreCmd(file, replace, stdout); err != nil {
 			fmt.Fprintln(stderr, "error:", err)
 			return 1
 		}

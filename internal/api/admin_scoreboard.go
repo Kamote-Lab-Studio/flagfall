@@ -44,6 +44,15 @@ func (a *API) adminScoreboard(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"frozen": snap.Frozen, "freezeAt": utcPtr(snap.FreezeAt), "updatedAt": snap.UpdatedAt.UTC(), "entries": staffEntries(snap),
+	})
+	return nil
+}
+
+// staffEntries is the unfrozen board: ranked teams, then hidden and banned
+// teams that scored, without a rank.
+func staffEntries(snap *scoring.Snapshot) []adminBoardEntry {
 	board := snap.Full
 	entries := []adminBoardEntry{}
 	add := func(ts *scoring.TeamScore, rank int) {
@@ -80,10 +89,7 @@ func (a *API) adminScoreboard(w http.ResponseWriter, r *http.Request) error {
 	for _, ts := range off {
 		add(ts, 0)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"frozen": snap.Frozen, "freezeAt": utcPtr(snap.FreezeAt), "updatedAt": snap.UpdatedAt.UTC(), "entries": entries,
-	})
-	return nil
+	return entries
 }
 
 func (a *API) adminCTFtime(w http.ResponseWriter, r *http.Request) error {

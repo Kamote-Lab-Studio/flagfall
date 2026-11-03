@@ -96,6 +96,7 @@ func (a *API) MountAdmin(r chi.Router) {
 			a.mountAdminPeople(r)
 			a.mountAdminContent(r)
 			a.mountAdminScoreboard(r)
+			a.mountAdminData(r)
 		})
 
 		r.NotFound(func(w http.ResponseWriter, r *http.Request) { writeError(w, errNotFound) })
@@ -143,8 +144,10 @@ var redactKeys = map[string]bool{"password": true, "current": true, "next": true
 // audit writes one audit_log row for every successful write.
 func (a *API) audit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Previews only render Markdown; they change nothing.
-		if r.Method == http.MethodGet || r.Method == http.MethodHead || strings.HasSuffix(r.URL.Path, "/preview") {
+		// Previews only render Markdown; they change nothing. A restore
+		// replaces the audit log itself, so its handler writes its own entry.
+		if r.Method == http.MethodGet || r.Method == http.MethodHead ||
+			strings.HasSuffix(r.URL.Path, "/preview") || strings.HasSuffix(r.URL.Path, "/restore") {
 			next.ServeHTTP(w, r)
 			return
 		}
