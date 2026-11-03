@@ -113,8 +113,8 @@ func top(t *testing.T, s *store.Store) string {
 func TestRoundTripIntoAnotherDatabase(t *testing.T) {
 	src, srcFiles, key := source(t)
 	zr, m := write(t, src, srcFiles)
-	// 13 sample downloads + 4 service build contexts + the handout + the logo.
-	if m.Rows["teams"] != 312 || m.Rows["users"] != 829 || m.Files != 19 || m.Rows["theme_images"] != 1 || len(m.MissingFiles) != 0 {
+	// 13 sample downloads + the handout + the logo.
+	if m.Rows["teams"] != 312 || m.Rows["users"] != 829 || m.Files != 15 || m.Rows["theme_images"] != 1 || len(m.MissingFiles) != 0 {
 		t.Fatalf("manifest = %+v", m)
 	}
 

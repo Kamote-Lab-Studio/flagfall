@@ -13,13 +13,6 @@ flags:
 hints:
   - cost: 25
     content: hints/1.md
-connection: "nc {{event_domain}} 31338"
-service:
-  image: ./Dockerfile
-  port: 31338
-  publish: 31338
-  memory: 64Mi
-  healthcheck: tcp
 files:
   - dist/notes
 theme_fields:

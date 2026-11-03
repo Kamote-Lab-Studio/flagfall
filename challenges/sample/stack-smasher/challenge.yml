@@ -10,13 +10,6 @@ description: description.md
 flags:
   - type: exact
     value: "flag{no_canary_no_mercy}"
-connection: "nc {{event_domain}} 31337"
-service:
-  image: ./Dockerfile
-  port: 31337
-  publish: 31337
-  memory: 64Mi
-  healthcheck: tcp
 files:
   - dist/smasher
 theme_fields:

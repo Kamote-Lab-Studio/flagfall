@@ -1,1 +1,0 @@
-flag{ssti_greetings_from_jinja}

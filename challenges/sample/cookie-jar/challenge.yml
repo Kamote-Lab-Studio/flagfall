@@ -10,12 +10,5 @@ description: description.md
 flags:
   - type: exact
     value: "flag{c00kies_are_not_a_session}"
-connection: "http://{{event_domain}}:31080"
-service:
-  image: ./Dockerfile
-  port: 8080
-  publish: 31080
-  memory: 64Mi
-  healthcheck: /
 theme_fields:
   location: {city: "Amsterdam", lat: 52.37, lon: 4.9}

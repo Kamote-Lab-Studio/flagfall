@@ -13,12 +13,5 @@ flags:
 hints:
   - cost: 25
     content: hints/1.md
-connection: "http://{{event_domain}}:31081"
-service:
-  image: ./Dockerfile
-  port: 8080
-  publish: 31081
-  memory: 128Mi
-  healthcheck: /
 theme_fields:
   location: {city: "Lisbon", lat: 38.72, lon: -9.14}
