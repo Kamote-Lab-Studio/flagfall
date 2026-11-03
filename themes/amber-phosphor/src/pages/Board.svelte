@@ -21,10 +21,10 @@
     }
   }
 
+  // Every solve sends a live "solve" event, which bumps challengeVersion
+  // (values change under dynamic scoring); our own solves call load() directly.
   $effect(() => {
     void app.challengeVersion;
-    void app.scoreVersion;
-    void app.me?.team?.score;
     load();
   });
 
