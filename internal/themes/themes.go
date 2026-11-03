@@ -1,6 +1,10 @@
-// Package themes serves the published player theme: its static files under
-// /theme/{id}/ and its index.html for every other page path, so the theme's
-// client-side router can take over.
+// Package themes loads theme packages and serves the player site: the live
+// theme's index.html for every page path (so its client-side router can take
+// over) and each installed theme's static files under /theme/{id}/.
+//
+// Which theme and settings a request gets is decided by the Manager: the
+// live row in theme_settings for players, or a draft for an admin who has
+// preview turned on.
 package themes
 
 import (
@@ -17,6 +21,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -28,39 +33,54 @@ import (
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
 	"font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
-// Manifest is the part of theme.json the server needs.
+// DefaultID is the bundled theme players get when nothing else is published,
+// or when the published theme can't be served.
+const DefaultID = "amber-phosphor"
+
+// Manifest is theme.json. See docs/dev/schemas/theme.schema.json.
 type Manifest struct {
-	ID       string    `json:"id"`
-	Name     string    `json:"name"`
-	Version  string    `json:"version"`
-	Entry    string    `json:"entry"`
-	Settings []Setting `json:"settings"`
+	ManifestVersion int               `json:"manifestVersion"`
+	ID              string            `json:"id"`
+	Name            string            `json:"name"`
+	Description     string            `json:"description,omitempty"`
+	Version         string            `json:"version"`
+	Author          string            `json:"author,omitempty"`
+	License         string            `json:"license,omitempty"`
+	Homepage        string            `json:"homepage,omitempty"`
+	Flagfall        string            `json:"flagfall,omitempty"`
+	Entry           string            `json:"entry"`
+	Pages           map[string]string `json:"pages"`
+	Screenshots     []Screenshot      `json:"screenshots,omitempty"`
+	Settings        []Setting         `json:"settings"`
 	// ChallengeFields are extra per-challenge values the theme shows.
 	ChallengeFields []ChallengeField `json:"challengeFields"`
 	// AdminStyle is an optional stylesheet, inside the entry's folder, that
 	// restyles the admin panel to match the theme while it is active.
-	AdminStyle string `json:"adminStyle"`
+	AdminStyle string `json:"adminStyle,omitempty"`
 }
 
-// Setting is one organizer-editable value declared by a theme.
-type Setting struct {
-	Key     string `json:"key"`
-	Type    string `json:"type"`
-	Default any    `json:"default"`
-	CSSVar  string `json:"cssVar"`
+// Screenshot is a picture of the theme shown in the admin theme browser.
+type Screenshot struct {
+	Path string `json:"path"`
+	Alt  string `json:"alt"`
 }
 
 // Theme is a loaded theme package.
 type Theme struct {
 	Manifest Manifest
-	files    fs.FS // rooted at the theme folder (theme.json, dist/...)
+	// Source is "bundled" (compiled into the binary) or "uploaded".
+	Source   string
+	raw      []byte // theme.json as read
+	files    fs.FS  // rooted at the theme folder (theme.json, dist/...)
 	index    []byte
 	assetDir string // folder holding the entry, e.g. "dist"
 	adminCSS string // AdminStyle relative to assetDir, when the file exists
+	static   http.Handler
 }
 
-// Load reads a theme package. A missing entry file is not an error: the
-// theme is returned with Built() false so the server can explain what to do.
+// Load reads and validates a theme package. A missing entry file is not an
+// error: the theme is returned with Built() false so the server can explain
+// what to do.
 func Load(fsys fs.FS) (*Theme, error) {
 	raw, err := fs.ReadFile(fsys, "theme.json")
 	if err != nil {
@@ -70,13 +90,16 @@ func Load(fsys fs.FS) (*Theme, error) {
 	if err := json.Unmarshal(raw, &m); err != nil {
 		return nil, fmt.Errorf("theme.json: %w", err)
 	}
-	if m.ID == "" || m.Entry == "" || !fs.ValidPath(m.Entry) {
-		return nil, errors.New("theme.json: id and a relative entry path are required")
+	if m.Entry == "" || !fs.ValidPath(m.Entry) || path.Ext(m.Entry) != ".html" || path.Dir(m.Entry) == "." {
+		return nil, errors.New("theme.json: entry must be an .html file inside a folder, such as dist/index.html")
+	}
+	if err := m.Validate(); err != nil {
+		return nil, fmt.Errorf("theme.json: %w", err)
 	}
 	if err := checkFields(m.ChallengeFields); err != nil {
 		return nil, fmt.Errorf("theme.json: %w", err)
 	}
-	t := &Theme{Manifest: m, files: fsys, assetDir: path.Dir(m.Entry)}
+	t := &Theme{Manifest: m, Source: "bundled", raw: raw, files: fsys, assetDir: path.Dir(m.Entry)}
 	if m.AdminStyle != "" {
 		rel, ok := strings.CutPrefix(m.AdminStyle, t.assetDir+"/")
 		if !fs.ValidPath(m.AdminStyle) || !ok || path.Ext(rel) != ".css" {
@@ -91,58 +114,248 @@ func Load(fsys fs.FS) (*Theme, error) {
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
+	if sub, err := fs.Sub(fsys, t.assetDir); err == nil {
+		t.static = http.StripPrefix(t.Prefix(), http.FileServer(http.FS(sub)))
+	}
 	return t, nil
 }
 
 // Built reports whether the theme's front end has been compiled.
 func (t *Theme) Built() bool { return t.index != nil }
 
-// Register records a bundled theme in the themes table (insert or update),
-// so settings can be saved against it.
-func (t *Theme) Register(ctx context.Context, db *store.Store, now time.Time) error {
-	raw, err := fs.ReadFile(t.files, "theme.json")
-	if err != nil {
-		return err
+// Prefix is the URL path the theme's files are served under.
+func (t *Theme) Prefix() string { return "/theme/" + t.Manifest.ID + "/" }
+
+// Screenshot opens screenshot i of the theme.
+func (t *Theme) Screenshot(i int) (fs.File, error) {
+	if i < 0 || i >= len(t.Manifest.Screenshots) {
+		return nil, fs.ErrNotExist
 	}
+	p := t.Manifest.Screenshots[i].Path
+	if !fs.ValidPath(p) {
+		return nil, fs.ErrNotExist
+	}
+	return t.files.Open(p)
+}
+
+// Register records the theme in the themes table (insert or update), so
+// settings can be saved against it.
+func (t *Theme) Register(ctx context.Context, db *store.Store, now time.Time) error {
 	row := &store.Theme{
 		ID: t.Manifest.ID, Name: t.Manifest.Name, Version: t.Manifest.Version,
-		Source: "bundled", Manifest: string(raw), InstalledAt: now.UTC(),
+		Source: t.Source, Manifest: string(t.raw), InstalledAt: now.UTC(),
 	}
-	_, err = db.DB.NewInsert().Model(row).
+	_, err := db.DB.NewInsert().Model(row).
 		On("CONFLICT (id) DO UPDATE").
-		Set("name = EXCLUDED.name, version = EXCLUDED.version, manifest = EXCLUDED.manifest").
+		Set("name = EXCLUDED.name, version = EXCLUDED.version, source = EXCLUDED.source, manifest = EXCLUDED.manifest").
 		Exec(ctx)
 	return err
 }
 
-// Handler serves one theme.
-type Handler struct {
-	theme  *Theme
-	store  *store.Store
-	logger *slog.Logger
-	static http.Handler
+// ---------------------------------------------------------------- registry
+
+// Registry holds the installed themes. It is safe for concurrent use.
+type Registry struct {
+	mu   sync.RWMutex
+	byID map[string]*Theme
 }
 
-// New returns a handler for theme. Settings are read from the store on each
-// page load so published changes show up without a restart.
-func New(theme *Theme, db *store.Store, logger *slog.Logger) *Handler {
+// NewRegistry returns a registry holding themes.
+func NewRegistry(themes ...*Theme) *Registry {
+	r := &Registry{byID: map[string]*Theme{}}
+	for _, t := range themes {
+		r.Add(t)
+	}
+	return r
+}
+
+// Add installs t, replacing any theme with the same id.
+func (r *Registry) Add(t *Theme) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.byID[t.Manifest.ID] = t
+}
+
+// Remove uninstalls the theme with id.
+func (r *Registry) Remove(id string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.byID, id)
+}
+
+// Get returns the theme with id, or nil.
+func (r *Registry) Get(id string) *Theme {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.byID[id]
+}
+
+// List returns every installed theme: the default first, then by name.
+func (r *Registry) List() []*Theme {
+	r.mu.RLock()
+	out := make([]*Theme, 0, len(r.byID))
+	for _, t := range r.byID {
+		out = append(out, t)
+	}
+	r.mu.RUnlock()
+	sort.Slice(out, func(i, j int) bool {
+		a, b := out[i].Manifest, out[j].Manifest
+		if (a.ID == DefaultID) != (b.ID == DefaultID) {
+			return a.ID == DefaultID
+		}
+		return strings.ToLower(a.Name) < strings.ToLower(b.Name)
+	})
+	return out
+}
+
+// ---------------------------------------------------------------- manager
+
+// View is the theme and settings one request should see.
+type View struct {
+	Theme *Theme
+	// Version of the settings row (0 when nothing is published).
+	Version int
+	// Values are the stored setting values; defaults are not merged in.
+	Values    map[string]any
+	CustomCSS string
+	// Preview is true when an admin is looking at a draft.
+	Preview bool
+	// Fallback is true when the published theme couldn't be served and
+	// the default theme is shown instead.
+	Fallback bool
+}
+
+// Manager decides which theme and settings each request gets.
+type Manager struct {
+	Registry *Registry
+	Store    *store.Store
+	Logger   *slog.Logger
+	// PreviewTheme returns the theme an admin is previewing in this
+	// request's session, or "". Nil turns preview off.
+	PreviewTheme func(*http.Request) string
+
+	warnMu   sync.Mutex
+	warnedAt map[string]time.Time
+}
+
+// NewManager returns a manager for the themes in reg.
+func NewManager(reg *Registry, db *store.Store, logger *slog.Logger) *Manager {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	h := &Handler{theme: theme, store: db, logger: logger}
-	if sub, err := fs.Sub(theme.files, theme.assetDir); err == nil {
-		h.static = http.StripPrefix(h.Prefix(), http.FileServer(http.FS(sub)))
-	}
-	return h
+	return &Manager{Registry: reg, Store: db, Logger: logger}
 }
 
-// Prefix is the URL path the theme's files are served under.
-func (h *Handler) Prefix() string { return "/theme/" + h.theme.Manifest.ID + "/" }
+// Live is what players see: the published theme and settings, or the
+// default theme if nothing is published or the published theme is missing
+// or unbuilt.
+func (m *Manager) Live(ctx context.Context) View {
+	row := new(store.ThemeSettings)
+	if m.Store != nil {
+		err := m.Store.DB.NewSelect().Model(row).Where("status = ?", "live").
+			OrderExpr("published_at DESC, id DESC").Limit(1).Scan(ctx)
+		if err == nil {
+			t := m.Registry.Get(row.ThemeID)
+			if t != nil && t.Built() {
+				return View{Theme: t, Version: row.Version, Values: decodeValues(m.Logger, row), CustomCSS: row.CustomCSS}
+			}
+			if row.ThemeID != DefaultID {
+				m.warnOnce(row.ThemeID, "the published theme can't be served; players get the default theme instead",
+					"theme", row.ThemeID, "installed", t != nil)
+				return View{Theme: m.defaultTheme(), Values: map[string]any{}, Fallback: true}
+			}
+		}
+	}
+	return View{Theme: m.defaultTheme(), Values: map[string]any{}}
+}
+
+// LiveTheme is the published theme (see Live).
+func (m *Manager) LiveTheme() *Theme { return m.Live(context.Background()).Theme }
+
+// Current is what this request should see: the admin's preview, if one is
+// on for this session, or the live theme.
+func (m *Manager) Current(r *http.Request) View {
+	if m.PreviewTheme != nil {
+		if id := m.PreviewTheme(r); id != "" {
+			if v, ok := m.Draft(r.Context(), id); ok {
+				return v
+			}
+		}
+	}
+	return m.Live(r.Context())
+}
+
+// Draft is what an admin previewing theme id sees: its draft, else its
+// latest saved settings, else its defaults. ok is false if the theme isn't
+// installed and built.
+func (m *Manager) Draft(ctx context.Context, id string) (View, bool) {
+	t := m.Registry.Get(id)
+	if t == nil || !t.Built() {
+		return View{}, false
+	}
+	v := View{Theme: t, Values: map[string]any{}, Preview: true}
+	if m.Store == nil {
+		return v, true
+	}
+	row := new(store.ThemeSettings)
+	// The draft if there is one, otherwise the live, scheduled or most
+	// recent version, so preview starts from what the organizer last saw.
+	err := m.Store.DB.NewSelect().Model(row).Where("theme_id = ?", id).
+		OrderExpr("CASE status WHEN 'draft' THEN 0 WHEN 'live' THEN 1 WHEN 'scheduled' THEN 2 ELSE 3 END, version DESC").
+		Limit(1).Scan(ctx)
+	if err == nil {
+		v.Version, v.Values, v.CustomCSS = row.Version, decodeValues(m.Logger, row), row.CustomCSS
+	}
+	return v, true
+}
+
+func (m *Manager) defaultTheme() *Theme {
+	if t := m.Registry.Get(DefaultID); t != nil {
+		return t
+	}
+	if list := m.Registry.List(); len(list) > 0 {
+		return list[0]
+	}
+	return nil
+}
+
+// warnOnce logs the same theme problem at most every 10 minutes.
+func (m *Manager) warnOnce(key, msg string, args ...any) {
+	m.warnMu.Lock()
+	defer m.warnMu.Unlock()
+	if m.warnedAt == nil {
+		m.warnedAt = map[string]time.Time{}
+	}
+	if time.Since(m.warnedAt[key]) < 10*time.Minute {
+		return
+	}
+	m.warnedAt[key] = time.Now()
+	m.Logger.Warn(msg, args...)
+}
+
+func decodeValues(logger *slog.Logger, row *store.ThemeSettings) map[string]any {
+	values := map[string]any{}
+	if err := json.Unmarshal([]byte(row.Data), &values); err != nil {
+		logger.Warn("theme settings are not valid JSON", "theme", row.ThemeID, "version", row.Version, "err", err)
+	}
+	return values
+}
+
+// ---------------------------------------------------------------- HTTP
+
+// Handler serves the player site and theme files.
+type Handler struct {
+	m *Manager
+}
+
+// New returns a handler for the themes m manages. Settings are read from
+// the store on each page load so published changes show up at once.
+func New(m *Manager) *Handler { return &Handler{m: m} }
 
 // Mount registers the theme routes. Mount it after the API so the catch-all
 // only sees page paths.
 func (h *Handler) Mount(r chi.Router) {
-	r.Get(h.Prefix()+"*", h.serveAsset)
+	r.Get("/theme/{id}/*", h.serveAsset)
 	r.Get("/*", h.servePage)
 }
 
@@ -156,28 +369,40 @@ func (h *Handler) servePage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Content-Security-Policy", CSP)
-	if !h.theme.Built() {
+	v := h.m.Current(r)
+	if v.Theme == nil || !v.Theme.Built() {
+		name, id := "player", DefaultID
+		if v.Theme != nil {
+			name, id = v.Theme.Manifest.Name, v.Theme.Manifest.ID
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusServiceUnavailable)
-		fmt.Fprintf(w, notBuilt, html.EscapeString(h.theme.Manifest.Name), html.EscapeString(h.theme.Manifest.ID))
+		fmt.Fprintf(w, notBuilt, html.EscapeString(name), html.EscapeString(id))
 		return
 	}
-	page := h.theme.index
-	if style := h.settingsStyle(r.Context()); style != "" {
+	page := v.Theme.index
+	if style := CSSVars(v.Theme.Manifest.Settings, v.Values); style != "" {
 		page = injectHead(page, style)
+	}
+	if css := SafeCustomCSS(v.CustomCSS); css != "" {
+		page = InjectHead(page, `<style id="flagfall-custom-css">`+css+"</style>")
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
+	if v.Preview {
+		w.Header().Set("Cache-Control", "no-store")
+	}
 	_, _ = w.Write(page)
 }
 
 func (h *Handler) serveAsset(w http.ResponseWriter, r *http.Request) {
-	if h.static == nil || !h.theme.Built() {
+	t := h.m.Registry.Get(chi.URLParam(r, "id"))
+	if t == nil || t.static == nil || !t.Built() {
 		http.NotFound(w, r)
 		return
 	}
 	w.Header().Set("Content-Security-Policy", CSP)
-	rest := strings.TrimPrefix(r.URL.Path, h.Prefix())
+	rest := strings.TrimPrefix(r.URL.Path, t.Prefix())
 	if rest == "" || strings.HasSuffix(rest, "/") {
 		http.NotFound(w, r) // no directory listings
 		return
@@ -188,40 +413,26 @@ func (h *Handler) serveAsset(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Header().Set("Cache-Control", "no-cache")
 	}
-	h.static.ServeHTTP(w, r)
+	t.static.ServeHTTP(w, r)
 }
 
-// AdminHead returns the tags that restyle the admin panel to match this
+// AdminHead returns the tags that restyle the admin panel to match the live
 // theme: a link to its admin stylesheet, then the organizer's live settings
 // as CSS variables so customized colors carry over. It returns "" when the
 // theme ships no admin stylesheet, and the admin keeps its own look.
 func (h *Handler) AdminHead(ctx context.Context) string {
-	if h.theme.adminCSS == "" || !h.theme.Built() {
+	v := h.m.Live(ctx)
+	if v.Theme == nil || v.Theme.adminCSS == "" || !v.Theme.Built() {
 		return ""
 	}
-	out := `<link rel="stylesheet" id="flagfall-theme-admin" href="` + html.EscapeString(h.Prefix()+h.theme.adminCSS) + `">`
-	if style := h.settingsStyle(ctx); style != "" {
+	out := `<link rel="stylesheet" id="flagfall-theme-admin" href="` + html.EscapeString(v.Theme.Prefix()+v.Theme.adminCSS) + `">`
+	if style := CSSVars(v.Theme.Manifest.Settings, v.Values); style != "" {
 		out += `<style id="flagfall-settings">` + style + "</style>"
 	}
 	return out
 }
 
-// settingsStyle turns the live settings into a :root block of CSS variables.
-func (h *Handler) settingsStyle(ctx context.Context) string {
-	values := map[string]any{}
-	if h.store != nil {
-		live := new(store.ThemeSettings)
-		err := h.store.DB.NewSelect().Model(live).
-			Where("status = ?", "live").Where("theme_id = ?", h.theme.Manifest.ID).
-			Limit(1).Scan(ctx)
-		if err == nil {
-			if err := json.Unmarshal([]byte(live.Data), &values); err != nil {
-				h.logger.Warn("theme settings are not valid JSON", "theme", h.theme.Manifest.ID, "err", err)
-			}
-		}
-	}
-	return CSSVars(h.theme.Manifest.Settings, values)
-}
+// ---------------------------------------------------------------- CSS
 
 var (
 	cssVarName = regexp.MustCompile(`^--[a-zA-Z0-9-]+$`)
@@ -240,14 +451,20 @@ func CSSVars(settings []Setting, values map[string]any) string {
 		if s.CSSVar == "" || !cssVarName.MatchString(s.CSSVar) {
 			continue
 		}
-		v, ok := values[s.Key].(string)
-		if !ok || v == "" {
+		var v string
+		switch x := values[s.Key].(type) {
+		case string:
+			v = x
+		case float64:
+			v = fmt.Sprint(x)
+		}
+		if v == "" {
 			continue
 		}
 		if s.Type == "color" && !hexColor.MatchString(v) {
 			continue
 		}
-		if !safeValue.MatchString(v) || strings.Count(v, `"`)%2 != 0 || strings.Count(v, `'`)%2 != 0 {
+		if !safeCSSValue(v) {
 			continue
 		}
 		decls = append(decls, s.CSSVar+": "+v+";")
@@ -257,6 +474,32 @@ func CSSVars(settings []Setting, values map[string]any) string {
 	}
 	sort.Strings(decls)
 	return ":root { " + strings.Join(decls, " ") + " }"
+}
+
+// MaxCustomCSS caps the custom CSS box.
+const MaxCustomCSS = 40_000
+
+// CheckCustomCSS explains why custom CSS can't be saved, or returns "".
+// It must stay inside one <style> element, so "<" is not allowed, and it
+// may only load files from this server (the CSP enforces that too).
+func CheckCustomCSS(css string) string {
+	switch {
+	case len(css) > MaxCustomCSS:
+		return fmt.Sprintf("Custom CSS must be at most %d characters.", MaxCustomCSS)
+	case strings.Contains(css, "<"):
+		return `Custom CSS can't contain "<".`
+	case strings.Contains(strings.ToLower(css), "@import"):
+		return "Custom CSS can't use @import."
+	}
+	return ""
+}
+
+// SafeCustomCSS returns css if it passes CheckCustomCSS, else "".
+func SafeCustomCSS(css string) string {
+	if strings.TrimSpace(css) == "" || CheckCustomCSS(css) != "" {
+		return ""
+	}
+	return css
 }
 
 func injectHead(page []byte, css string) []byte {

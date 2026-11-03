@@ -10,6 +10,7 @@ import (
 
 	"github.com/flagfall/flagfall/internal/markdown"
 	"github.com/flagfall/flagfall/internal/store"
+	"github.com/flagfall/flagfall/internal/themes"
 )
 
 // ---------------------------------------------------------------- event
@@ -230,14 +231,25 @@ func (a *API) getPage(w http.ResponseWriter, r *http.Request) error {
 
 // ---------------------------------------------------------------- theme
 
-// DefaultTheme is used until an admin publishes another (Phase 2).
-const DefaultTheme = "amber-phosphor"
+// DefaultTheme is used until an admin publishes another.
+const DefaultTheme = themes.DefaultID
 
 func (a *API) getTheme(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	out := map[string]any{
 		"id": DefaultTheme, "version": 0, "settings": map[string]any{},
 		"preview": false, "locale": "en", "messages": map[string]string{},
+	}
+	if a.themes != nil {
+		// The same choice the page itself was served with: an admin's
+		// preview, the live theme, or the default if that can't be served.
+		v := a.themes.Current(r)
+		if v.Theme != nil {
+			out["id"] = v.Theme.Manifest.ID
+		}
+		out["version"], out["settings"], out["preview"] = v.Version, v.Values, v.Preview
+		writeJSON(w, http.StatusOK, out)
+		return nil
 	}
 	live := new(store.ThemeSettings)
 	if err := a.store.DB.NewSelect().Model(live).Where("status = ?", "live").Limit(1).Scan(ctx); err == nil {

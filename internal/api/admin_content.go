@@ -150,8 +150,9 @@ func (a *API) adminDeleteAnnouncement(w http.ResponseWriter, r *http.Request) er
 	return noContent(w)
 }
 
-// RunScheduler pushes scheduled announcements live when their time comes.
-// It returns when ctx is done.
+// RunScheduler pushes scheduled announcements live when their time comes,
+// and makes a scheduled theme switch live when it is due. It returns when
+// ctx is done.
 func (a *API) RunScheduler(ctx context.Context, every time.Duration) {
 	last := a.now().UTC()
 	t := time.NewTicker(every)
@@ -162,6 +163,7 @@ func (a *API) RunScheduler(ctx context.Context, every time.Duration) {
 			return
 		case <-t.C:
 			last = a.publishDue(ctx, last)
+			a.publishScheduledThemes(ctx)
 		}
 	}
 }

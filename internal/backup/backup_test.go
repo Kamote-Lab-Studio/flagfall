@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -209,7 +210,7 @@ func TestBadBackupsChangeNothing(t *testing.T) {
 		},
 		"other schema": func(name string, data []byte) []byte {
 			if name == "manifest.json" {
-				return bytes.Replace(data, []byte(`"schema": 1`), []byte(`"schema": 99`), 1)
+				return regexp.MustCompile(`"schema": \d+`).ReplaceAll(data, []byte(`"schema": 99`))
 			}
 			return data
 		},

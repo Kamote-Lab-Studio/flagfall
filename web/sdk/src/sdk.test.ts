@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createClient, FlagfallError, formatDuration, isError, relativeTime } from "./index.js";
+import { createThemeContext } from "./theme.js";
 
 function fakeFetch(routes: Record<string, { status?: number; body?: unknown }>) {
   const calls: { url: string; init: RequestInit }[] = [];
@@ -105,5 +106,27 @@ describe("live", () => {
     expect(opened).toEqual(["/api/v1/live"]);
     ff.live.close();
     vi.useRealTimers();
+  });
+});
+
+describe("preview", () => {
+  const info = { id: "neon", version: 2, settings: {}, preview: true, locale: "en", messages: {} };
+
+  it("reloads a preview tab when the admin saves this theme's draft or ends preview", () => {
+    const channel: { onmessage: ((ev: { data: unknown }) => void) | null } = { onmessage: null };
+    const reload = vi.fn();
+    createThemeContext(info, { channel, reload });
+    channel.onmessage!({ data: { type: "draft-saved", themeId: "other" } });
+    channel.onmessage!({ data: "junk" });
+    expect(reload).not.toHaveBeenCalled();
+    channel.onmessage!({ data: { type: "draft-saved", themeId: "neon" } });
+    channel.onmessage!({ data: { type: "preview-ended", themeId: "neon" } });
+    expect(reload).toHaveBeenCalledTimes(2);
+  });
+
+  it("doesn't listen outside preview", () => {
+    const channel: { onmessage: ((ev: { data: unknown }) => void) | null } = { onmessage: null };
+    createThemeContext({ ...info, preview: false }, { channel, reload: vi.fn() });
+    expect(channel.onmessage).toBeNull();
   });
 });

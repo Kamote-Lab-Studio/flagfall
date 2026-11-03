@@ -17,10 +17,20 @@ import (
 	amberphosphor "github.com/flagfall/flagfall/themes/amber-phosphor"
 )
 
-const manifest = `{"id":"demo","name":"Demo","version":"1.0.0","entry":"dist/index.html","settings":[
- {"key":"accent","type":"color","default":"#FFB000","cssVar":"--amber"},
- {"key":"font","type":"text","default":"x","cssVar":"--font"},
- {"key":"title","type":"text","default":"x"}]}`
+const manifest = `{"manifestVersion":1,"id":"demo","name":"Demo","version":"1.0.0","entry":"dist/index.html",` + pages + `,"settings":[
+ {"key":"accent","type":"color","label":"Accent","default":"#FFB000","cssVar":"--amber","contrastWith":"background"},
+ {"key":"background","type":"color","label":"Background","default":"#0D1321"},
+ {"key":"font","type":"text","label":"Font","default":"x","cssVar":"--font"},
+ {"key":"title","type":"text","label":"Title","default":"x"}]}`
+
+const pages = `"pages":{"board":"/","challenge":"/c/:slug","scoreboard":"/s","teams":"/t","team":"/t/:id","page":"/p/:slug",` +
+	`"signIn":"/in","signUp":"/up","account":"/a","announcements":"/n","notStarted":"/soon","over":"/over"}`
+
+// handler serves the given themes; the first is the one players get when
+// nothing is published.
+func handler(db *store.Store, ts ...*themes.Theme) *themes.Handler {
+	return themes.New(themes.NewManager(themes.NewRegistry(ts...), db, nil))
+}
 
 func newServer(t *testing.T, fsys fstest.MapFS, db *store.Store) *httptest.Server {
 	t.Helper()
@@ -30,7 +40,7 @@ func newServer(t *testing.T, fsys fstest.MapFS, db *store.Store) *httptest.Serve
 	}
 	r := chi.NewRouter()
 	r.Get("/api/v1/event", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "api") })
-	themes.New(theme, db, nil).Mount(r)
+	handler(db, theme).Mount(r)
 	srv := httptest.NewServer(r)
 	t.Cleanup(srv.Close)
 	return srv
@@ -187,7 +197,7 @@ func TestAdminHead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := themes.New(theme, nil, nil).AdminHead(t.Context()); got != "" {
+	if got := handler(nil, theme).AdminHead(t.Context()); got != "" {
 		t.Fatalf("no adminStyle: got %q", got)
 	}
 
@@ -196,7 +206,7 @@ func TestAdminHead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := themes.New(theme, nil, nil).AdminHead(t.Context()); got != "" {
+	if got := handler(nil, theme).AdminHead(t.Context()); got != "" {
 		t.Fatalf("missing admin.css: got %q", got)
 	}
 
@@ -218,7 +228,7 @@ func TestAdminHead(t *testing.T) {
 	}
 	want := `<link rel="stylesheet" id="flagfall-theme-admin" href="/theme/demo/admin.css">` +
 		`<style id="flagfall-settings">:root { --amber: #00FF88; }</style>`
-	if got := themes.New(theme, db, nil).AdminHead(t.Context()); got != want {
+	if got := handler(db, theme).AdminHead(t.Context()); got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 

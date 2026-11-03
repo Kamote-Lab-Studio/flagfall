@@ -276,8 +276,10 @@ func serve(logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	themeManager := themes.NewManager(themes.NewRegistry(theme), db, logger)
 	playerAPI := api.New(api.Options{Store: db, Config: cfg, Hub: hub, Files: files, Logger: logger,
-		Theme: func() *themes.Theme { return theme }})
+		Themes: themeManager})
+	themeManager.PreviewTheme = playerAPI.PreviewTheme
 	if code, required, err := playerAPI.PrepareSetup(ctx); err != nil {
 		return fmt.Errorf("check for an owner account: %w", err)
 	} else if required {
@@ -291,13 +293,14 @@ func serve(logOut io.Writer) error {
 	if !theme.Built() {
 		logger.Warn("the player theme isn't built; pages show a build reminder (run make web-build, then rebuild)")
 	}
-	themeHandler := themes.New(theme, db, logger)
+	themeHandler := themes.New(themeManager)
 	adminPanel := adminui.New(adminweb.FS).WithHead(themeHandler.AdminHead)
 	if !adminPanel.Built() {
 		logger.Warn("the admin panel isn't built; /admin shows a build reminder (run make web-build, then rebuild)")
 	}
 
-	// Pushes scheduled announcements to players when they go out.
+	// Pushes scheduled announcements to players when they go out, and makes
+	// scheduled theme switches live.
 	go playerAPI.RunScheduler(ctx, 15*time.Second)
 
 	srv := &http.Server{

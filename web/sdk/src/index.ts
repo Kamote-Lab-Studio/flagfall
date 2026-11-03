@@ -32,6 +32,7 @@ import type {
 } from "./types.js";
 import { createLive } from "./live.js";
 import { createThemeContext, type ThemeInfo } from "./theme.js";
+export { PREVIEW_CHANNEL, type PreviewMessage } from "./theme.js";
 
 export type * from "./types.js";
 export { relativeTime, formatDuration } from "./format.js";

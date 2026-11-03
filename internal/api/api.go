@@ -48,6 +48,7 @@ type API struct {
 	mailer Mailer
 	files  *blobs.Store
 	theme  func() *themes.Theme
+	themes *themes.Manager
 	// httpClient makes outgoing calls (Discord webhooks).
 	httpClient *http.Client
 	log        *slog.Logger
@@ -75,6 +76,10 @@ type Options struct {
 	// Theme returns the active player theme, for its challenge fields; nil
 	// means a theme without any.
 	Theme func() *themes.Theme
+	// Themes manages installed themes, drafts and preview (the Appearance
+	// section). Nil turns those admin routes off. When Theme is nil, the
+	// live theme from Themes is used for challenge fields.
+	Themes *themes.Manager
 	// HTTPClient makes outgoing calls; tests swap its transport.
 	HTTPClient *http.Client
 	Logger     *slog.Logger
@@ -109,7 +114,10 @@ func New(o Options) *API {
 	if a.mailer == nil {
 		a.mailer = settingsMailer{a}
 	}
-	a.theme = o.Theme
+	a.theme, a.themes = o.Theme, o.Themes
+	if a.theme == nil && a.themes != nil {
+		a.theme = a.themes.LiveTheme
+	}
 	if a.files = o.Files; a.files == nil {
 		a.files = blobs.Local(blobs.LocalDir(o.Config.DataDir))
 	}

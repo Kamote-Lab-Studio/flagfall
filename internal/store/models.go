@@ -85,6 +85,8 @@ type Session struct {
 	ExpiresAt  time.Time `bun:"expires_at"`
 	IP         *string   `bun:"ip"`
 	UserAgent  *string   `bun:"user_agent"`
+	// PreviewTheme is the theme an admin is previewing in this session.
+	PreviewTheme *string `bun:"preview_theme"`
 }
 
 type PasswordReset struct {

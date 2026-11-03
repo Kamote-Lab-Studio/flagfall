@@ -71,3 +71,73 @@ export interface ChallengeField {
   options?: { value: string; label: string }[];
 }
 export interface ChallengeFields { theme: { id: string; name: string }; fields: ChallengeField[] }
+
+// ---------------------------------------------------------------- themes
+
+export type SettingValue = string | number | boolean;
+
+export interface ThemeSetting {
+  key: string;
+  type: "color" | "text" | "boolean" | "number" | "select" | "font" | "image";
+  label: string;
+  help?: string;
+  group?: string;
+  default?: SettingValue;
+  cssVar?: string;
+  contrastWith?: string;
+  minContrast?: number;
+  maxLength?: number;
+  multiline?: boolean;
+  min?: number;
+  max?: number;
+  step?: number;
+  /** select: {value,label}[]; font: string[] */
+  options?: ({ value: string; label: string } | string)[];
+  accept?: string[];
+  maxBytes?: number;
+}
+
+export interface ThemeSettingsVersion {
+  version: number;
+  values: Record<string, SettingValue>;
+  customCss: string;
+  publishAt?: string;
+  publishedAt?: string;
+}
+
+export interface InstalledTheme {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  author: string;
+  license: string;
+  homepage: string;
+  source: "bundled" | "uploaded";
+  built: boolean;
+  live: boolean;
+  previewing: boolean;
+  adminStyle: boolean;
+  settings: ThemeSetting[];
+  challengeFields: ChallengeField[];
+  screenshots: { url: string; alt: string }[];
+  published: ThemeSettingsVersion | null;
+  draft: ThemeSettingsVersion | null;
+  scheduled: ThemeSettingsVersion | null;
+}
+
+export interface ThemeList {
+  themes: InstalledTheme[];
+  liveThemeId: string;
+  fallback: boolean;
+}
+
+export interface ThemeHistoryEntry {
+  version: number;
+  status: "draft" | "live" | "scheduled" | "archived";
+  values: Record<string, SettingValue>;
+  customCss: string;
+  publishAt: string | null;
+  publishedAt: string | null;
+  publishedBy: string | null;
+}
