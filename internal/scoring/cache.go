@@ -22,7 +22,9 @@ type Snapshot struct {
 	UpdatedAt time.Time
 }
 
-// Cache holds the latest snapshot and rebuilds it after Invalidate.
+// Cache holds the latest snapshot and rebuilds it after Invalidate, or once
+// it is MaxAge old, so changes made outside this process (the CLI, another
+// server on the same database) show up within a minute.
 type Cache struct {
 	store *store.Store
 	now   func() time.Time
@@ -33,6 +35,9 @@ type Cache struct {
 }
 
 // NewCache returns a cache over the given store.
+// MaxAge is how long a snapshot is used without an Invalidate.
+const MaxAge = time.Minute
+
 func NewCache(s *store.Store) *Cache {
 	return &Cache{store: s, now: time.Now, dirty: true}
 }
@@ -49,7 +54,7 @@ func (c *Cache) Invalidate() {
 func (c *Cache) Get(ctx context.Context) (*Snapshot, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if !c.dirty && c.snap != nil {
+	if !c.dirty && c.snap != nil && c.now().Sub(c.snap.UpdatedAt) < MaxAge {
 		// The frozen flag depends on the clock, so refresh it on every read.
 		if c.snap.FreezeAt != nil {
 			c.snap.Frozen = !c.now().Before(*c.snap.FreezeAt)

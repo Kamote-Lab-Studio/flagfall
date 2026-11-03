@@ -43,6 +43,8 @@ Commands:
   seed sample  Load the sample event (12 challenges, 312 teams) into an empty install
   backup <file>   Write a backup (database and uploaded files) to a .zip; "-" for stdout
   restore <file>  Restore a backup into an empty install (--replace to overwrite one; stop the server first)
+  challenges check|import|export <folder>
+               Validate, import or export challenge.yml folders (flagfall challenges for details)
   healthcheck  Exit 0 if the server on FLAGFALL_ADDR answers /healthz (for containers)
   version      Print the version and exit
   help         Show this help
@@ -224,6 +226,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		return 0
+	case "challenges":
+		return challengesCmd(args[1:], stdout, stderr)
 	case "healthcheck":
 		if err := healthcheck(); err != nil {
 			fmt.Fprintln(stderr, "unhealthy:", err)

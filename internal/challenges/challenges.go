@@ -220,7 +220,15 @@ func loadOne(fsys fs.FS, file string) (*Spec, Problems) {
 	if s.Description == "" {
 		bad("description is required")
 	} else {
-		s.descriptionMD = readTextOrInline(fsys, s.dir, s.Description)
+		var missing bool
+		if s.descriptionMD, missing = readTextOrInline(fsys, s.dir, s.Description); missing {
+			bad("description: %q isn't in the challenge folder", s.Description)
+		}
+	}
+	for _, m := range placeholderRE.FindAllStringSubmatch(s.Connection, -1) {
+		if !Placeholders[m[1]] {
+			bad("connection: unknown placeholder {{%s}} (known: {{event_domain}})", m[1])
+		}
 	}
 	for i, h := range s.Hints {
 		if h.Cost < 0 {
@@ -229,7 +237,11 @@ func loadOne(fsys fs.FS, file string) (*Spec, Problems) {
 		if h.Content == "" {
 			bad("hints[%d]: content is required", i)
 		}
-		s.hintContent = append(s.hintContent, readTextOrInline(fsys, s.dir, h.Content))
+		text, missing := readTextOrInline(fsys, s.dir, h.Content)
+		if missing {
+			bad("hints[%d]: %q isn't in the challenge folder", i, h.Content)
+		}
+		s.hintContent = append(s.hintContent, text)
 	}
 	for _, f := range s.Files {
 		clean := path.Clean(f)
@@ -256,15 +268,27 @@ func loadOne(fsys fs.FS, file string) (*Spec, Problems) {
 }
 
 // readTextOrInline returns the file's contents if value names a file in dir,
-// and value itself otherwise.
-func readTextOrInline(fsys fs.FS, dir, value string) string {
-	if !strings.Contains(value, "\n") && (strings.HasSuffix(value, ".md") || strings.HasSuffix(value, ".txt")) {
+// and value itself otherwise. missing is true when value looks like a file
+// name (one word ending in .md or .txt) but there's no such file, which
+// would otherwise show players the file name as the text.
+func readTextOrInline(fsys fs.FS, dir, value string) (text string, missing bool) {
+	if fileLike.MatchString(value) {
 		if b, err := fs.ReadFile(fsys, path.Join(dir, path.Clean(value))); err == nil {
-			return string(b)
+			return string(b), false
 		}
+		return value, true
 	}
-	return value
+	return value, false
 }
+
+var fileLike = regexp.MustCompile(`^\S+\.(md|txt)$`)
+
+// placeholderRE finds {{name}} in connection strings.
+var placeholderRE = regexp.MustCompile(`\{\{([^}]*)\}\}`)
+
+// Placeholders are the {{names}} a connection string may use; the player
+// API fills them in.
+var Placeholders = map[string]bool{"event_domain": true}
 
 // Result summarizes an Apply.
 type Result struct {
@@ -293,24 +317,7 @@ func Apply(ctx context.Context, db *store.Store, secret []byte, filesDir string,
 				return err
 			}
 
-			themeFields, _ := json.Marshal(orEmpty(s.ThemeFields))
-			tags, _ := json.Marshal(orEmptyList(s.Tags))
-			requires, _ := json.Marshal(orEmptyList(s.Requires))
-			c.Slug, c.Name, c.Category = s.Slug, s.Name, s.Category
-			c.Difficulty = strPtr(strings.ToLower(s.Difficulty))
-			c.Author, c.DescriptionMD = s.Author, s.descriptionMD
-			c.Connection = strPtr(s.Connection)
-			c.ThemeFields, c.Tags, c.Requires = string(themeFields), string(tags), string(requires)
-			c.VisibleFrom = s.VisibleFrom
-			c.State = s.State
-			if c.State == "" {
-				c.State = "visible"
-			}
-			if s.Scoring != nil {
-				c.Value, c.MinValue, c.Decay = s.Scoring.Initial, &s.Scoring.Minimum, &s.Scoring.Decay
-			} else {
-				c.Value, c.MinValue, c.Decay = *s.Value, nil, nil
-			}
+			s.fill(c)
 			if !exists {
 				c.Position, c.CreatedAt = i, now
 			}
@@ -360,6 +367,28 @@ func Apply(ctx context.Context, db *store.Store, secret []byte, filesDir string,
 		return nil
 	})
 	return res, err
+}
+
+// fill sets the challenge columns the spec controls.
+func (s *Spec) fill(c *store.Challenge) {
+	themeFields, _ := json.Marshal(orEmpty(s.ThemeFields))
+	tags, _ := json.Marshal(orEmptyList(s.Tags))
+	requires, _ := json.Marshal(orEmptyList(s.Requires))
+	c.Slug, c.Name, c.Category = s.Slug, s.Name, s.Category
+	c.Difficulty = strPtr(strings.ToLower(s.Difficulty))
+	c.Author, c.DescriptionMD = s.Author, s.descriptionMD
+	c.Connection = strPtr(s.Connection)
+	c.ThemeFields, c.Tags, c.Requires = string(themeFields), string(tags), string(requires)
+	c.VisibleFrom = s.VisibleFrom
+	c.State = s.State
+	if c.State == "" {
+		c.State = "visible"
+	}
+	if s.Scoring != nil {
+		c.Value, c.MinValue, c.Decay = s.Scoring.Initial, &s.Scoring.Minimum, &s.Scoring.Decay
+	} else {
+		c.Value, c.MinValue, c.Decay = *s.Value, nil, nil
+	}
 }
 
 func syncHints(ctx context.Context, tx bun.Tx, challengeID int64, s *Spec) error {
