@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../../../docs/dev/schemas/challenge.schema.json
+format: 1
+slug: sanity-check
+name: "Sanity Check"
+category: Misc
+difficulty: Easy
+author: organizers
+value: 50
+description: description.md
+flags:
+  - type: exact
+    value: "flag{read_the_rules}"
+theme_fields:
+  location: {city: "Sao Paulo", lat: -23.55, lon: -46.63}

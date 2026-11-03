@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=../../../docs/dev/schemas/challenge.schema.json
+format: 1
+slug: memory-lane
+name: "Memory Lane"
+category: Forensics
+difficulty: Medium
+author: vex
+value: 400
+description: description.md
+flags:
+  - type: exact
+    value: "flag{volatility_is_a_virtue}"
+hints:
+  - cost: 25
+    content: hints/1.md
+theme_fields:
+  location: {city: "Manila", lat: 14.6, lon: 120.98}

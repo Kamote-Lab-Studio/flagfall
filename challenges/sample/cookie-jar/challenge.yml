@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=../../../docs/dev/schemas/challenge.schema.json
+format: 1
+slug: cookie-jar
+name: "Cookie Jar"
+category: Web
+difficulty: Easy
+author: mira
+value: 100
+description: description.md
+flags:
+  - type: exact
+    value: "flag{c00kies_are_not_a_session}"
+connection: "https://cookiejar.{{event_domain}}"
+theme_fields:
+  location: {city: "Amsterdam", lat: 52.37, lon: 4.9}

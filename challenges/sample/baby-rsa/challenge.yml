@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../../../docs/dev/schemas/challenge.schema.json
+format: 1
+slug: baby-rsa
+name: "Baby RSA"
+category: Crypto
+difficulty: Easy
+author: ada
+value: 150
+description: description.md
+flags:
+  - type: exact
+    value: "flag{cube_root_of_all_evil}"
+theme_fields:
+  location: {city: "Cairo", lat: 30.04, lon: 31.24}

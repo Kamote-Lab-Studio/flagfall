@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../../../docs/dev/schemas/challenge.schema.json
+format: 1
+slug: where-is-the-server
+name: "Where Is the Server?"
+category: OSINT
+difficulty: Easy
+author: juno
+value: 150
+description: description.md
+flags:
+  - type: exact
+    value: "flag{frankfurt_hetzner}"
+theme_fields:
+  location: {city: "Frankfurt", lat: 50.11, lon: 8.68}

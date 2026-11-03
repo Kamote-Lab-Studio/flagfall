@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../../docs/dev/schemas/challenge.schema.json
+format: 1
+slug: heap-feng-shui
+name: "Heap Feng Shui"
+category: Pwn
+difficulty: Hard
+author: rook
+value: 500
+description: description.md
+flags:
+  - type: exact
+    value: "flag{tcache_poisoned_and_proud}"
+hints:
+  - cost: 25
+    content: hints/1.md
+connection: "nc notes.{{event_domain}} 31338"
+theme_fields:
+  location: {city: "Berlin", lat: 52.52, lon: 13.4}

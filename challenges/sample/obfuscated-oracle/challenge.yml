@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=../../../docs/dev/schemas/challenge.schema.json
+format: 1
+slug: obfuscated-oracle
+name: "Obfuscated Oracle"
+category: Reversing
+difficulty: Hard
+author: quill
+value: 500
+description: description.md
+flags:
+  - type: exact
+    value: "flag{lifted_the_bytecode}"
+hints:
+  - cost: 25
+    content: hints/1.md
+theme_fields:
+  location: {city: "Reykjavik", lat: 64.15, lon: -21.94}

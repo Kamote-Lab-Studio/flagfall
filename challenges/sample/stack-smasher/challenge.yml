@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=../../../docs/dev/schemas/challenge.schema.json
+format: 1
+slug: stack-smasher
+name: "Stack Smasher"
+category: Pwn
+difficulty: Medium
+author: rook
+value: 300
+description: description.md
+flags:
+  - type: exact
+    value: "flag{no_canary_no_mercy}"
+connection: "nc smasher.{{event_domain}} 31337"
+theme_fields:
+  location: {city: "Seoul", lat: 37.57, lon: 126.98}

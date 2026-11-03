@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../../docs/dev/schemas/challenge.schema.json
+format: 1
+slug: template-of-doom
+name: "Template of Doom"
+category: Web
+difficulty: Medium
+author: vex
+value: 350
+description: description.md
+flags:
+  - type: exact
+    value: "flag{ssti_greetings_from_jinja}"
+hints:
+  - cost: 25
+    content: hints/1.md
+connection: "https://doom.{{event_domain}}"
+theme_fields:
+  location: {city: "Lisbon", lat: 38.72, lon: -9.14}

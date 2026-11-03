@@ -18,6 +18,7 @@ import (
 	"github.com/flagfall/flagfall/internal/api"
 	"github.com/flagfall/flagfall/internal/config"
 	"github.com/flagfall/flagfall/internal/live"
+	"github.com/flagfall/flagfall/internal/seed"
 	"github.com/flagfall/flagfall/internal/server"
 	"github.com/flagfall/flagfall/internal/store"
 	"github.com/flagfall/flagfall/internal/version"
@@ -29,11 +30,12 @@ Usage:
   flagfall <command>
 
 Commands:
-  serve     Start the server
-  version   Print the version and exit
-  help      Show this help
+  serve        Start the server
+  seed sample  Load the sample event (12 challenges, 312 teams) into an empty install
+  version      Print the version and exit
+  help         Show this help
 
-Configuration comes from environment variables (see docs/dev/config.md):
+Configuration comes from environment variables or flagfall.toml (see docs/dev/config.md):
   FLAGFALL_ADDR        address to listen on (default ":8080")
   FLAGFALL_PUBLIC_URL  public URL players use (default "http://localhost:8080")
   FLAGFALL_DATA_DIR    data directory (default "./data")
@@ -56,6 +58,16 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		return 0
+	case "seed":
+		if len(args) != 2 || args[1] != "sample" {
+			fmt.Fprintln(stderr, "usage: flagfall seed sample")
+			return 2
+		}
+		if err := seedSample(stdout); err != nil {
+			fmt.Fprintln(stderr, "error:", err)
+			return 1
+		}
+		return 0
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, version.String())
 		return 0
@@ -71,28 +83,14 @@ func run(args []string, stdout, stderr io.Writer) int {
 func serve(logOut io.Writer) error {
 	logger := slog.New(slog.NewTextHandler(logOut, nil))
 
-	cfg, err := config.Load(os.LookupEnv)
-	if err != nil {
-		return err
-	}
-	if err := cfg.EnsureSecret(); err != nil {
-		return err
-	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	db, err := store.Open(ctx, cfg.DatabaseURL)
+	cfg, db, err := setup(ctx)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	if err := db.Migrate(ctx); err != nil {
-		return err
-	}
-	if err := db.EnsureEvent(ctx); err != nil {
-		return err
-	}
 
 	hub := live.NewHub()
 	defer hub.Close()
@@ -127,4 +125,44 @@ func serve(logOut io.Writer) error {
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
 	}
+}
+
+// setup loads the config, the secret key and a migrated database.
+func setup(ctx context.Context) (config.Config, *store.Store, error) {
+	cfg, err := config.Load(os.LookupEnv)
+	if err != nil {
+		return cfg, nil, err
+	}
+	if err := cfg.EnsureSecret(); err != nil {
+		return cfg, nil, err
+	}
+	db, err := store.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return cfg, nil, err
+	}
+	if err := db.Migrate(ctx); err != nil {
+		db.Close()
+		return cfg, nil, err
+	}
+	if err := db.EnsureEvent(ctx); err != nil {
+		db.Close()
+		return cfg, nil, err
+	}
+	return cfg, db, nil
+}
+
+func seedSample(out io.Writer) error {
+	ctx := context.Background()
+	cfg, db, err := setup(ctx)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	sum, err := seed.Sample(ctx, db, cfg.Secret(), api.FilesDir(cfg.DataDir), time.Now())
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Loaded the sample event: %d challenges, %d teams, %d players, %d solves.\n\n", sum.Challenges, sum.Teams, sum.Players, sum.Solves)
+	fmt.Fprintf(out, "Sign in as the captain of null_pointer to try it:\n  email:    %s\n  password: %s\n", seed.DemoEmail, seed.DemoPassword)
+	return nil
 }

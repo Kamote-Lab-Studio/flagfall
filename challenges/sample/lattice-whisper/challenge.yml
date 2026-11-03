@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=../../../docs/dev/schemas/challenge.schema.json
+format: 1
+slug: lattice-whisper
+name: "Lattice Whisper"
+category: Crypto
+difficulty: Hard
+author: ada
+value: 450
+description: description.md
+flags:
+  - type: exact
+    value: "flag{hidden_number_problem_solved}"
+hints:
+  - cost: 25
+    content: hints/1.md
+theme_fields:
+  location: {city: "Zurich", lat: 47.37, lon: 8.54}
