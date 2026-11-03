@@ -143,14 +143,22 @@ var redactKeys = map[string]bool{"password": true, "current": true, "next": true
 // audit writes one audit_log row for every successful write.
 func (a *API) audit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		// Previews only render Markdown; they change nothing.
+		if r.Method == http.MethodGet || r.Method == http.MethodHead || strings.HasSuffix(r.URL.Path, "/preview") {
 			next.ServeHTTP(w, r)
 			return
 		}
+		const maxRecorded = 64 << 10
 		var body []byte
+		tooLarge := false
 		if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
-			body, _ = io.ReadAll(io.LimitReader(r.Body, 64<<10))
-			r.Body = io.NopCloser(bytes.NewReader(body))
+			body, _ = io.ReadAll(io.LimitReader(r.Body, maxRecorded+1))
+			// Hand the handler the whole body: what was read, then the rest.
+			r.Body = struct {
+				io.Reader
+				io.Closer
+			}{io.MultiReader(bytes.NewReader(body), r.Body), r.Body}
+			tooLarge = len(body) > maxRecorded
 		}
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		next.ServeHTTP(ww, r)
@@ -168,6 +176,10 @@ func (a *API) audit(next http.Handler) http.Handler {
 			Action: r.Method + " " + pattern, Target: target,
 			After: redactedJSON(body, strings.Contains(pattern, "/flags")),
 			IP:    strp(clientIP(r)), At: a.now().UTC(),
+		}
+		if tooLarge {
+			s := "(body too large to record)"
+			entry.After = &s
 		}
 		if u := currentUser(r); u != nil {
 			entry.ActorID = &u.ID

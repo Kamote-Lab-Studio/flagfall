@@ -69,6 +69,21 @@ func TestAdminPages(t *testing.T) {
 	admin.must(400, "PUT", "/admin/api/v1/pages/Bad%20Slug", map[string]any{"title": "x"})
 	admin.must(400, "PUT", "/admin/api/v1/pages/new", map[string]any{"body": "missing title"})
 	admin.must(204, "DELETE", "/admin/api/v1/pages/faq", nil)
+
+	// Bodies past the audit log's 64 KB capture still reach the handler whole.
+	long := strings.TrimSpace(strings.Repeat("word ", 30_000)) // 150 KB
+	if p := admin.must(201, "PUT", "/admin/api/v1/pages/long", map[string]any{"title": "Long", "body": long}); len(p.str("body")) != len(long) {
+		t.Fatalf("body cut to %d bytes", len(p.str("body")))
+	}
+	rows := e.audit()
+	if last := rows[len(rows)-1]; last.After == nil || *last.After != "(body too large to record)" {
+		t.Fatalf("audit = %+v", last)
+	}
+	// Previews aren't changes, so they aren't logged.
+	admin.must(200, "POST", "/admin/api/v1/preview", map[string]any{"markdown": "*hi*"})
+	if n := len(e.audit()); n != len(rows) {
+		t.Fatalf("preview was audited (%d rows, want %d)", n, len(rows))
+	}
 }
 
 func TestAdminScoreboardAndAdjustments(t *testing.T) {

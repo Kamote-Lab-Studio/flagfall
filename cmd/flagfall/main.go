@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/flagfall/flagfall/internal/adminui"
 	"github.com/flagfall/flagfall/internal/api"
 	"github.com/flagfall/flagfall/internal/config"
 	"github.com/flagfall/flagfall/internal/live"
@@ -24,6 +25,7 @@ import (
 	"github.com/flagfall/flagfall/internal/themes"
 	"github.com/flagfall/flagfall/internal/version"
 	amberphosphor "github.com/flagfall/flagfall/themes/amber-phosphor"
+	adminweb "github.com/flagfall/flagfall/web/admin"
 )
 
 const usage = `Flagfall: a self-hosted CTF platform.
@@ -115,6 +117,10 @@ func serve(logOut io.Writer) error {
 		logger.Warn("the player theme isn't built; pages show a build reminder (run make web-build, then rebuild)")
 	}
 	themeHandler := themes.New(theme, db, logger)
+	adminPanel := adminui.New(adminweb.FS)
+	if !adminPanel.Built() {
+		logger.Warn("the admin panel isn't built; /admin shows a build reminder (run make web-build, then rebuild)")
+	}
 
 	// Pushes scheduled announcements to players when they go out.
 	go playerAPI.RunScheduler(ctx, 15*time.Second)
@@ -124,7 +130,7 @@ func serve(logOut io.Writer) error {
 		Handler: server.New(server.Options{
 			Logger:     logger,
 			TrustProxy: cfg.TrustProxy,
-			Mount:      []func(chi.Router){playerAPI.Mount, playerAPI.MountAdmin, themeHandler.Mount},
+			Mount:      []func(chi.Router){playerAPI.Mount, playerAPI.MountAdmin, adminPanel.Mount, themeHandler.Mount},
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

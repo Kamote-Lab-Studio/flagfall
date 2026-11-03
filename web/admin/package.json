@@ -1,0 +1,23 @@
+{
+  "name": "@flagfall/admin",
+  "version": "1.0.0-dev",
+  "private": true,
+  "description": "The Flagfall admin panel, served at /admin. Never themed.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+  },
+  "devDependencies": {
+    "@fontsource/ibm-plex-mono": "^5",
+    "@fontsource/ibm-plex-sans": "^5",
+    "@sveltejs/vite-plugin-svelte": "^5",
+    "@tsconfig/svelte": "^5",
+    "svelte": "^5",
+    "svelte-check": "^4",
+    "typescript": "^5.9",
+    "vite": "^6"
+  }
+}

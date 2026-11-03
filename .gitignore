@@ -33,6 +33,9 @@ flagfall.toml
 !themes/*/dist/
 themes/*/dist/*
 !themes/*/dist/.keep
+!web/admin/dist/
+web/admin/dist/*
+!web/admin/dist/.keep
 
 # Playwright
 e2e/test-results/
