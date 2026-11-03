@@ -60,6 +60,8 @@ type eventView struct {
 	RegistrationOpen bool          `json:"registrationOpen"`
 	Brackets         []bracketView `json:"brackets"`
 	Categories       []string      `json:"categories"`
+	// DemoAccount is null except on demo installs (flagfall seed sample).
+	DemoAccount *store.DemoAccount `json:"demoAccount"`
 }
 
 type userSummaryView struct {
@@ -134,6 +136,7 @@ func eventToView(ev *store.Event, brackets []store.Bracket, categories []string,
 		ServerTime: now.UTC(), TimeZone: ev.TimeZone, MaxTeamSize: ev.MaxTeamSize,
 		ScoringMode: ev.ScoringMode, RegistrationOpen: ev.RegistrationOpen,
 		Brackets: []bracketView{}, Categories: categories,
+		DemoAccount: ev.ParsedSettings().DemoAccount,
 	}
 	if v.Categories == nil {
 		v.Categories = []string{}

@@ -5,6 +5,7 @@
 
 # Runtime data (SQLite, uploads) from `flagfall serve`
 /data/
+/data.bak-*/
 
 # Node
 node_modules/

@@ -38,6 +38,8 @@ export interface Event {
   brackets: Bracket[];
   /** Category names in display order, for filters. */
   categories: string[];
+  /** A public login to show on the sign-in page. Null except on demo installs. */
+  demoAccount: { email: string; password: string } | null;
 }
 
 // ---------------------------------------------------------------- Accounts and teams

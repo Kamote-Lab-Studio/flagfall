@@ -47,6 +47,9 @@ func TestSampleMatchesTheDesigns(t *testing.T) {
 	if ev.State(time.Now()) != store.StateRunning {
 		t.Errorf("sample event state = %s", ev.State(time.Now()))
 	}
+	if d := ev.ParsedSettings().DemoAccount; d == nil || d.Email != seed.DemoEmail || d.Password != seed.DemoPassword {
+		t.Errorf("sample event should advertise the demo account, got %+v", d)
+	}
 
 	var demo store.User
 	if err := s.DB.NewSelect().Model(&demo).Where("email_key = ?", seed.DemoEmail).Scan(ctx); err != nil {

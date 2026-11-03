@@ -106,6 +106,12 @@ func Sample(ctx context.Context, db *store.Store, secret []byte, filesDir string
 		return sum, err
 	}
 
+	// The sign-in page shows this login so visitors can try the demo.
+	demoSettings, err := json.Marshal(store.EventSettings{DemoAccount: &store.DemoAccount{Email: DemoEmail, Password: DemoPassword}})
+	if err != nil {
+		return sum, err
+	}
+
 	// 33h38m into a 48-hour event, matching the "14:22:07 left" in the designs.
 	start := now.Add(-(33*time.Hour + 38*time.Minute))
 	end := start.Add(48 * time.Hour)
@@ -116,6 +122,7 @@ func Sample(ctx context.Context, db *store.Store, secret []byte, filesDir string
 			Set("name = ?", "Flagfall CTF").
 			Set("starts_at = ?", start).Set("ends_at = ?", end).Set("freeze_at = ?", freeze).
 			Set("max_team_size = 4").Set("registration_open = ?", true).Set("updated_at = ?", now).
+			Set("settings = ?", string(demoSettings)).
 			Where("id = 1").Exec(ctx); err != nil {
 			return err
 		}

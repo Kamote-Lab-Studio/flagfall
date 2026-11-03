@@ -308,3 +308,12 @@ textarea { min-height: 96px; padding: 10px 14px; background: var(--panel); borde
 .podium-list li { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 16px 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
 .podium-list .place { font-family: var(--display); font-weight: 700; font-size: 28px; color: var(--amber); }
 @media (max-width: 700px) { .countdown { font-size: 48px; } .state-screen .term-big { font-size: 40px; } }
+
+/* sign-in: demo account panel (demo installs only) */
+.demo { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; background: var(--amber-bg); border: 1px dashed var(--amber-line); border-radius: 6px; color: var(--amber-2); font-size: 14px; }
+.demo h2 { font-family: var(--display); font-size: 16px; color: var(--amber); }
+.form-card .demo p { margin: 0; }
+.demo dl { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.demo dt { color: var(--muted); font-size: 12px; }
+.demo dd { margin: 0 0 6px; overflow-wrap: anywhere; }
+.demo code { color: var(--text); }

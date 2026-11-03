@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -66,4 +67,25 @@ func (s *Store) EnsureEvent(ctx context.Context) error {
 		_, err := tx.NewInsert().Model(&Bracket{Name: "Open", Description: "Everyone"}).Exec(ctx)
 		return err
 	})
+}
+
+// EventSettings is the JSON kept in event.settings for options that don't
+// need their own column.
+type EventSettings struct {
+	// DemoAccount is shown on the sign-in page. Only `flagfall seed sample`
+	// sets it; real events never have one.
+	DemoAccount *DemoAccount `json:"demoAccount,omitempty"`
+}
+
+// DemoAccount is a public, throwaway login for demo installs.
+type DemoAccount struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// ParsedSettings decodes Settings. Bad or empty JSON gives zero settings.
+func (e *Event) ParsedSettings() EventSettings {
+	var s EventSettings
+	_ = json.Unmarshal([]byte(e.Settings), &s)
+	return s
 }

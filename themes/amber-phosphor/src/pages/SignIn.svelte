@@ -35,6 +35,15 @@
     }
   }
 
+  const demo = $derived(app.event?.demoAccount ?? null);
+
+  function useDemo() {
+    if (!demo) return;
+    email = demo.email;
+    password = demo.password;
+    error = "";
+  }
+
   async function reset(ev: SubmitEvent) {
     ev.preventDefault();
     busy = true;
@@ -87,6 +96,17 @@ connected to {app.event?.name ?? "flagfall"}
         </div>
         {#if error}<p class="status-msg bad" role="alert">{error}</p>{/if}
         <button class="btn" type="submit" disabled={busy}>Sign in</button>
+        {#if demo}
+          <section class="demo" aria-labelledby="demo-title">
+            <h2 id="demo-title">Demo account</h2>
+            <p>This is a demo install. Sign in as a team captain to try it:</p>
+            <dl>
+              <dt>Email</dt><dd><code>{demo.email}</code></dd>
+              <dt>Password</dt><dd><code>{demo.password}</code></dd>
+            </dl>
+            <button type="button" class="btn-ghost" onclick={useDemo}>Fill in the demo account</button>
+          </section>
+        {/if}
         <div class="form-foot">
           {#if app.event?.registrationOpen}<span>New here? <a href="/sign-up">Create an account</a></span>{/if}
           <a href="/">Browse without signing in</a>
