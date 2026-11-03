@@ -310,6 +310,8 @@ func (a *API) adminDashboard(w http.ResponseWriter, r *http.Request) error {
 		Slug       string     `json:"slug"`
 		Name       string     `json:"name"`
 		Category   string     `json:"category"`
+		Difficulty *string    `json:"difficulty"`
+		Points     int        `json:"points"`
 		State      string     `json:"state"`
 		Solves     int        `json:"solves"`
 		Attempts   int        `json:"attempts"`
@@ -331,9 +333,10 @@ func (a *API) adminDashboard(w http.ResponseWriter, r *http.Request) error {
 		hasFlag[f.ChallengeID] = true
 	}
 	for _, c := range cs {
-		v := chal{ID: idStr(c.ID), Slug: c.Slug, Name: c.Name, Category: c.Category, State: c.State, Attempts: attempts[c.ID]}
+		v := chal{ID: idStr(c.ID), Slug: c.Slug, Name: c.Name, Category: c.Category, Difficulty: c.Difficulty,
+			Points: c.Value, State: c.State, Attempts: attempts[c.ID]}
 		if st := board.Challenges[c.ID]; st != nil {
-			v.Solves = st.SolveCount
+			v.Solves, v.Points = st.SolveCount, st.Value
 			if st.FirstBlood != nil {
 				name := teamNames[st.FirstBlood.TeamID]
 				v.FirstBlood, v.FirstAt = &name, timePtr(st.FirstBlood.At)
@@ -378,7 +381,48 @@ func (a *API) adminDashboard(w http.ResponseWriter, r *http.Request) error {
 	if warnings == nil {
 		warnings = []string{}
 	}
+
+	// The newest solves, for the dashboard feed.
+	type latest struct {
+		TeamID        idStr     `json:"teamId"`
+		TeamName      string    `json:"teamName"`
+		ChallengeID   idStr     `json:"challengeId"`
+		ChallengeName string    `json:"challengeName"`
+		Points        int       `json:"points"`
+		SolvedAt      time.Time `json:"solvedAt"`
+	}
+	var rows []struct {
+		TeamID        int64     `bun:"team_id"`
+		TeamName      string    `bun:"team_name"`
+		ChallengeID   int64     `bun:"challenge_id"`
+		ChallengeName string    `bun:"challenge_name"`
+		Value         int       `bun:"value"`
+		SolvedAt      time.Time `bun:"solved_at"`
+	}
+	if err := db.NewSelect().TableExpr("solves AS s").
+		ColumnExpr("s.team_id, t.name AS team_name, s.challenge_id, c.name AS challenge_name, c.value, s.solved_at").
+		Join("JOIN teams AS t ON t.id = s.team_id").Join("JOIN challenges AS c ON c.id = s.challenge_id").
+		OrderExpr("s.solved_at DESC").Limit(8).Scan(ctx, &rows); err != nil {
+		return err
+	}
+	latestSolves := []latest{}
+	for _, r := range rows {
+		pts := r.Value
+		if st := board.Challenges[r.ChallengeID]; st != nil {
+			pts = st.Value
+		}
+		latestSolves = append(latestSolves, latest{TeamID: idStr(r.TeamID), TeamName: r.TeamName, ChallengeID: idStr(r.ChallengeID),
+			ChallengeName: r.ChallengeName, Points: pts, SolvedAt: r.SolvedAt.UTC()})
+	}
+	var teamsWithSolves int
+	if err := db.NewSelect().Model((*store.Solve)(nil)).ColumnExpr("COUNT(DISTINCT team_id)").Scan(ctx, &teamsWithSolves); err != nil {
+		return err
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
+		"teamsWithSolves":      teamsWithSolves,
+		"solvesLastHour":       count((*store.Solve)(nil), "solved_at > ?", now.Add(-time.Hour)),
+		"latestSolves":         latestSolves,
 		"services":             svcs,
 		"servicesEnabled":      a.services.Enabled(),
 		"state":                ev.State(now),

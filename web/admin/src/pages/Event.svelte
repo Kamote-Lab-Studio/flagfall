@@ -88,42 +88,86 @@
   onMount(load);
 </script>
 
-<h1>Event</h1>
-{#if error}<p class="notice bad">{error}</p>{/if}
-{#if ev}
-  <form class="card" onsubmit={save}>
-    <fieldset disabled={!editable}>
-      <label><span>Name</span><input bind:value={form.name} maxlength="80" required />
-        {#if errors.name}<div class="field-error">{errors.name}</div>{/if}</label>
-      <div class="grid">
-        <label><span>Starts</span><input type="datetime-local" bind:value={form.startsAt} />
-          {#if errors.startsAt}<div class="field-error">{errors.startsAt}</div>{/if}</label>
-        <label><span>Scoreboard freezes</span><input type="datetime-local" bind:value={form.freezeAt} />
-          {#if errors.freezeAt}<div class="field-error">{errors.freezeAt}</div>{/if}</label>
-        <label><span>Ends</span><input type="datetime-local" bind:value={form.endsAt} />
-          {#if errors.endsAt}<div class="field-error">{errors.endsAt}</div>{/if}</label>
+<form class="stack" onsubmit={save}>
+  <div class="page-head">
+    <div>
+      <h1>Event settings</h1>
+      <p class="muted">Changes to dates and scoring apply to everyone at once. They're recorded in the audit log.</p>
+    </div>
+    {#if editable && ev}
+      <div class="adm-actions">
+        <button class="primary" disabled={busy}>Save settings</button>
+      </div>
+    {/if}
+  </div>
+  {#if error}<p class="notice bad">{error}</p>{/if}
+  {#if ev}
+    <fieldset disabled={!editable} class="cards2">
+      <section class="panel pad stack" aria-labelledby="ev-event">
+        <h2 id="ev-event">Event</h2>
+        <label><span>Event name</span><input bind:value={form.name} maxlength="80" required />
+          {#if errors.name}<div class="field-error">{errors.name}</div>{/if}</label>
+        <div class="grid2">
+          <label><span>Starts</span><input type="datetime-local" bind:value={form.startsAt} />
+            {#if errors.startsAt}<div class="field-error">{errors.startsAt}</div>{/if}</label>
+          <label><span>Ends</span><input type="datetime-local" bind:value={form.endsAt} />
+            {#if errors.endsAt}<div class="field-error">{errors.endsAt}</div>{/if}</label>
+        </div>
         <label><span>Time zone shown to players</span>
           <input bind:value={form.timeZone} list="zones" />
           <datalist id="zones">{#each zones as z (z)}<option value={z}></option>{/each}</datalist>
           {#if errors.timeZone}<div class="field-error">{errors.timeZone}</div>{/if}</label>
-        <label><span>Max team size</span><input type="number" min="1" max="100" bind:value={form.maxTeamSize} />
+        <p class="hint">Times are in your browser's time zone. Players can switch to their local time.</p>
+      </section>
+
+      <section class="panel pad stack" aria-labelledby="ev-teams">
+        <h2 id="ev-teams">Teams and registration</h2>
+        <label><span>Max players per team</span><input type="number" min="1" max="100" bind:value={form.maxTeamSize} />
           {#if errors.maxTeamSize}<div class="field-error">{errors.maxTeamSize}</div>{/if}</label>
-        <label><span>Scoring</span>
-          <select bind:value={form.scoringMode}><option value="static">Static</option><option value="dynamic">Dynamic</option></select>
-          {#if errors.scoringMode}<div class="field-error">{errors.scoringMode}</div>{/if}</label>
+        <div>
+          <label class="toggle-row">
+            <span><span class="label">Registration open</span><span class="muted small">New players and teams can sign up.</span></span>
+            <input type="checkbox" bind:checked={form.registrationOpen} />
+          </label>
+          <label class="toggle-row">
+            <span><span class="label">Teams locked</span><span class="muted small">Nobody can join, leave or rename a team.</span></span>
+            <input type="checkbox" bind:checked={form.teamsLocked} />
+          </label>
+          <label class="toggle-row">
+            <span><span class="label">Challenges visible without signing in</span><span class="muted small">Visitors can read challenges but not submit flags.</span></span>
+            <input type="checkbox" bind:checked={form.publicChallenges} />
+          </label>
+        </div>
+      </section>
+
+      <section class="panel pad stack" aria-labelledby="ev-scoring">
+        <h2 id="ev-scoring">Scoring</h2>
+        <div class="stack-s" role="radiogroup" aria-label="Scoring mode">
+          <label class="radio"><input type="radio" value="static" bind:group={form.scoringMode} />
+            <span>Static<small class="muted">Each challenge is always worth its listed points.</small></span></label>
+          <label class="radio"><input type="radio" value="dynamic" bind:group={form.scoringMode} />
+            <span>Dynamic<small class="muted">Points drop as more teams solve, down to a minimum.</small></span></label>
+          {#if errors.scoringMode}<div class="field-error">{errors.scoringMode}</div>{/if}
+        </div>
         <label><span>Flag attempts per minute</span><input type="number" min="1" max="1000" bind:value={form.flagRateLimit} />
           {#if errors.flagRateLimit}<div class="field-error">{errors.flagRateLimit}</div>{/if}</label>
-      </div>
-      <p class="hint">Times are in your browser's time zone. Clear "freezes" to unfreeze the scoreboard.</p>
-      <label class="check"><input type="checkbox" bind:checked={form.registrationOpen} /><span>Registration open</span></label>
-      <label class="check"><input type="checkbox" bind:checked={form.teamsLocked} /><span>Teams locked (no joining, leaving or renaming)</span></label>
-      <label class="check"><input type="checkbox" bind:checked={form.publicChallenges} /><span>Challenges visible without signing in</span></label>
-      {#if editable}<div class="actions"><button class="primary" disabled={busy}>Save event</button>
-        <span class="muted">Last changed {when(ev.updatedAt)} · state: {ev.state}</span></div>{/if}
-    </fieldset>
-  </form>
+        <p class="hint">Per team.</p>
+      </section>
 
-  <h2>Brackets</h2>
+      <section class="panel pad stack" aria-labelledby="ev-board">
+        <h2 id="ev-board">Scoreboard</h2>
+        <label><span>Freeze the public scoreboard at</span><input type="datetime-local" bind:value={form.freezeAt} />
+          {#if errors.freezeAt}<div class="field-error">{errors.freezeAt}</div>{/if}</label>
+        <p class="hint">Teams still see their own score. Clear the time to unfreeze.</p>
+        <p class="muted small">Last changed {when(ev.updatedAt)}. State: {ev.state}.</p>
+      </section>
+    </fieldset>
+  {/if}
+</form>
+
+{#if ev}
+  <section class="panel table-panel" aria-labelledby="ev-brackets">
+  <h2 id="ev-brackets">Brackets</h2>
   <table>
     <thead><tr><th>Name</th><th>Description</th><th>Verified only</th><th class="num">Teams</th><th></th></tr></thead>
     <tbody>
@@ -142,15 +186,18 @@
     </tbody>
   </table>
   {#if editable}
-    <form class="toolbar" style="margin-top:0.75rem" onsubmit={addBracket}>
+    <form class="toolbar" style="padding: 12px 24px 14px" onsubmit={addBracket}>
       <input placeholder="New bracket name" bind:value={newBracket.name} required />
       <input placeholder="Description" bind:value={newBracket.description} />
       <label class="check" style="margin:0"><input type="checkbox" bind:checked={newBracket.requiresVerification} /><span>Verified only</span></label>
       <button>Add bracket</button>
     </form>
   {/if}
+  </section>
 {/if}
 
 <style>
-  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  .radio { display: flex; gap: 10px; align-items: flex-start; }
+  .radio small { display: block; }
+  .toggle-row .label { display: block; color: var(--text); }
 </style>

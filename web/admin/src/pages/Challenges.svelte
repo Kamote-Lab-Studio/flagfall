@@ -4,6 +4,11 @@
   import { href, navigate } from "../lib/router.svelte";
   import { can, notify } from "../lib/state.svelte";
   import type { Challenge, ChallengeSummary } from "../lib/types";
+  import ChallengeEdit from "./ChallengeEdit.svelte";
+
+  // The list, with the selected challenge's editor beside it
+  // (design/option-a/admin/challenge-*.html).
+  let { selected = null }: { selected?: string | null } = $props();
 
   let list = $state<ChallengeSummary[] | null>(null);
   let filter = $state("");
@@ -61,23 +66,28 @@
     }
   }
 
+  const total = $derived((list ?? []).reduce((n, c) => n + c.value, 0));
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
   onMount(load);
 </script>
 
-<h1>Challenges</h1>
-{#if error}<p class="notice bad">{error}</p>{/if}
-
-<div class="toolbar">
-  <input type="search" placeholder="Filter" aria-label="Filter challenges" bind:value={filter} />
-  <span class="spacer"></span>
+<div class="page-head">
+  <div>
+    <h1>Challenges</h1>
+    {#if list}<p class="muted">{list.length} {list.length === 1 ? "challenge" : "challenges"}, {total.toLocaleString()} points in total. Changes show to players straight away.</p>{/if}
+  </div>
   {#if can("author")}
-    <label class="button" style="margin:0">
-      {importing ? "Importing…" : "Import .zip"}
-      <input class="sr-only" type="file" accept=".zip,application/zip" onchange={importZip} disabled={importing} />
-    </label>
-    <button class="primary" onclick={() => (creating = !creating)}>New challenge</button>
+    <div class="adm-actions">
+      <label class="btn-line">
+        {importing ? "Importing…" : "Import .zip"}
+        <input class="sr-only" type="file" accept=".zip,application/zip" onchange={importZip} disabled={importing} />
+      </label>
+      <button class="primary" onclick={() => (creating = !creating)}>New challenge</button>
+    </div>
   {/if}
 </div>
+{#if error}<p class="notice bad">{error}</p>{/if}
 
 {#if problems.length}
   <div class="notice bad">
@@ -93,7 +103,8 @@
 {/if}
 
 {#if creating}
-  <form class="card" onsubmit={create}>
+  <form class="panel pad" onsubmit={create} aria-labelledby="new-title">
+    <h2 id="new-title">New challenge</h2>
     <div class="grid">
       <label><span>Name</span><input bind:value={draft.name} required />
         {#if errors.name}<div class="field-error">{errors.name}</div>{/if}</label>
@@ -109,25 +120,38 @@
   </form>
 {/if}
 
-{#if list}
-  {#if shown.length === 0}
-    <p class="empty">{list.length ? "Nothing matches." : "No challenges yet."}</p>
-  {:else}
-    <table>
-      <thead><tr><th>Name</th><th>Category</th><th>Difficulty</th><th>State</th><th class="num">Points</th><th class="num">Solves</th><th class="num">Attempts</th></tr></thead>
-      <tbody>
-        {#each shown as c (c.id)}
-          <tr>
-            <td><a href={href(`/challenges/${c.id}`)}>{c.name}</a> <span class="muted mono">{c.slug}</span></td>
-            <td>{c.category}</td>
-            <td>{c.difficulty ?? "—"}</td>
-            <td><span class="badge" class:ok={c.state === "visible"} class:warn={c.state === "hidden"}>{c.state}</span></td>
-            <td class="num">{c.currentValue}{#if c.currentValue !== c.value}<span class="muted"> / {c.value}</span>{/if}</td>
-            <td class="num">{c.solves}</td>
-            <td class="num">{c.attempts}</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+<div class="row">
+  <section class="grow-main" aria-label="Challenge list">
+    <div class="toolbar">
+      <input type="search" placeholder="Filter challenges" aria-label="Filter challenges" bind:value={filter} />
+    </div>
+    {#if list}
+      {#if shown.length === 0}
+        <p class="empty">{list.length ? "Nothing matches." : "No challenges yet."}</p>
+      {:else}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Challenge</th><th scope="col">Category</th><th scope="col" class="num">Points</th><th scope="col" class="num">Solves</th><th scope="col">State</th></tr></thead>
+            <tbody>
+              {#each shown as c (c.id)}
+                <tr class:sel={c.id === selected}>
+                  <td><a href={href(`/challenges/${c.id}`)} aria-current={c.id === selected ? "page" : undefined}>{c.name}</a></td>
+                  <td class="muted">{c.category}{c.difficulty ? `, ${c.difficulty}` : ""}</td>
+                  <td class="num mono">{c.currentValue}{#if c.currentValue !== c.value}<span class="muted"> / {c.value}</span>{/if}</td>
+                  <td class="num mono" class:red={c.state === "visible" && c.solves <= 5}>{c.solves}</td>
+                  <td><span class="badge" class:ok={c.state === "visible"} class:warn={c.state === "hidden"}>{cap(c.state)}</span></td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
+    {/if}
+  </section>
+
+  {#if selected}
+    <div class="side-panel stack">
+      {#key selected}<ChallengeEdit id={selected} onchange={load} />{/key}
+    </div>
   {/if}
-{/if}
+</div>

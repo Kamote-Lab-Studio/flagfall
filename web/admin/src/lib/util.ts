@@ -33,3 +33,21 @@ export function download(name: string, data: unknown) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+/** "3m ago", "2h ago", "4d ago". */
+export function ago(iso: string): string {
+  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+/** How long after `from` the time `to` was: "41s in", "17m in", "6h 02m in". */
+export function since(from: string, to: string): string {
+  const s = Math.max(0, Math.round((new Date(to).getTime() - new Date(from).getTime()) / 1000));
+  if (s < 60) return `${s}s in`;
+  if (s < 3600) return `${Math.floor(s / 60)}m in`;
+  const h = Math.floor(s / 3600);
+  return `${h}h ${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}m in`;
+}

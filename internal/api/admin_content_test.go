@@ -135,6 +135,17 @@ func TestAdminScoreboardAndAdjustments(t *testing.T) {
 	if dash.body["teams"] != 1.0 || dash.body["solves"] != 1.0 || dash.body["submissions"] != 2.0 {
 		t.Fatalf("dashboard = %s", dash.raw)
 	}
+	// The design's tiles and feed: teams that scored, the last hour, newest solves.
+	latest, _ := dash.body["latestSolves"].([]any)
+	if dash.body["teamsWithSolves"] != 1.0 || dash.body["solvesLastHour"] != 1.0 || len(latest) != 1 {
+		t.Fatalf("dashboard feed = %s", dash.raw)
+	}
+	if s := latest[0].(map[string]any); s["teamName"] == "" || s["challengeName"] == "" || s["points"].(float64) <= 0 {
+		t.Fatalf("latest solve = %v", s)
+	}
+	if c := dash.body["challenges"].([]any)[0].(map[string]any); c["points"].(float64) <= 0 {
+		t.Fatalf("challenge points missing: %v", c)
+	}
 }
 
 func TestDashboardWarnsAboutFlaglessChallenges(t *testing.T) {

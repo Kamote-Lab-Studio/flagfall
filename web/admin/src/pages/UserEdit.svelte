@@ -6,7 +6,8 @@
   import { roles, type User } from "../lib/types";
   import { when } from "../lib/util";
 
-  let { id }: { id: string } = $props();
+  // Shown beside the user list; onchange lets the list refresh.
+  let { id, onchange }: { id: string; onchange?: () => void } = $props();
 
   let u = $state<User | null>(null);
   let form = $state({ name: "", email: "", country: "", verified: false, banned: false, role: "player" as User["role"] });
@@ -41,6 +42,7 @@
     try {
       fill(await api.patch<User>(`/users/${id}`, body));
       notify("User saved.");
+      onchange?.();
     } catch (err) {
       errors = fieldErrors(err);
       notify(message(err), "error");
@@ -62,17 +64,24 @@
   onMount(load);
 </script>
 
-<p><a href={href("/users")}>← Users</a></p>
 {#if error}<p class="notice bad">{error}</p>{/if}
 {#if u}
-  <h1>{u.name} {#if u.role !== "player"}<span class="badge">{u.role}</span>{/if} {#if u.banned}<span class="badge bad">banned</span>{/if}</h1>
-  <p class="muted">
-    Joined {when(u.createdAt)} · last seen {when(u.lastSeenAt)} ·
-    {#if u.teamId}team <a href={href(`/teams/${u.teamId}`)}>{u.teamName}</a>{:else}no team{/if}
-  </p>
-
-  <form class="card" onsubmit={save}>
-    <div class="grid">
+  <form class="panel pad" onsubmit={save} aria-labelledby="user-title">
+    <div>
+      <div class="panel-head">
+        <h2 id="user-title">{u.name}</h2>
+        <a class="small link" href={href("/users")} aria-label="Close the editor">Close</a>
+      </div>
+      <p class="muted small">
+        Joined {when(u.createdAt)}, last seen {when(u.lastSeenAt)}.
+        {#if u.teamId}Team <a href={href(`/teams/${u.teamId}`)}>{u.teamName}</a>.{:else}No team.{/if}
+      </p>
+      {#if u.role !== "player" || u.banned}<div class="badges" style="margin-top:6px">
+        {#if u.role !== "player"}<span class="badge warn">{u.role}</span>{/if}
+        {#if u.banned}<span class="badge bad">Banned</span>{/if}
+      </div>{/if}
+    </div>
+    <div class="grid2">
       <label><span>Name</span><input bind:value={form.name} required />
         {#if errors.name}<div class="field-error">{errors.name}</div>{/if}</label>
       <label><span>Email</span><input type="email" bind:value={form.email} required />
@@ -89,11 +98,11 @@
     <label class="check"><input type="checkbox" bind:checked={form.verified} /><span>Verified (can join verified-only brackets)</span></label>
     <label class="check"><input type="checkbox" bind:checked={form.banned} /><span>Banned</span></label>
     <div class="actions">
-      <button class="primary" disabled={busy}>Save user</button>
+      <button class="primary grow" disabled={busy}>Save user</button>
       <button type="button" onclick={reset}>Send password reset</button>
     </div>
     {#if resetLink}
-      <div class="notice" style="margin-top:0.75rem">
+      <div class="notice stack-s">
         <p>No email server is set up, so pass this link on yourself. It works for one hour.</p>
         <input class="mono" readonly value={resetLink} onfocus={(e) => e.currentTarget.select()} />
       </div>

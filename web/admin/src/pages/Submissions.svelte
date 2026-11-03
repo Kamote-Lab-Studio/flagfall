@@ -46,26 +46,34 @@
   });
 </script>
 
-<h1>Submissions</h1>
+<div class="page-head">
+  <div>
+    <h1>Submissions</h1>
+    <p class="muted">Every flag sent, newest first. Correct flags aren't shown again.</p>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Result">
+    {#each [{ v: "", label: "All" }, { v: "true", label: "Correct" }, { v: "false", label: "Wrong" }] as { v, label } (v)}
+      <button role="tab" aria-selected={correct === v} onclick={() => { correct = v; load(); }}>{label}</button>
+    {/each}
+  </div>
+</div>
 {#if error}<p class="notice bad">{error}</p>{/if}
 <div class="toolbar">
-  <select bind:value={correct} onchange={load} aria-label="Result">
-    <option value="">All</option><option value="false">Wrong only</option><option value="true">Correct only</option>
-  </select>
-  <label class="check" style="margin:0"><input type="checkbox" bind:checked={live} /><span>Refresh every 10 s</span></label>
-  {#if teamId || userId || challengeId}<a href={href("/submissions")}>Clear filters</a>{/if}
+  <label class="check"><input type="checkbox" bind:checked={live} /><span>Refresh every 10 s</span></label>
+  {#if teamId || userId || challengeId}<a class="link" href={href("/submissions")}>Clear filters</a>{/if}
 </div>
 
+<div class="table-wrap">
 <table>
   <thead><tr><th>When</th><th>Team</th><th>User</th><th>Challenge</th><th>Submitted</th><th>IP</th></tr></thead>
   <tbody>
     {#each items as s (s.id)}
       <tr>
-        <td class="muted">{when(s.submittedAt)}</td>
+        <td class="muted small">{when(s.submittedAt)}</td>
         <td><a href={href(`/teams/${s.teamId}`)}>{s.teamName}</a></td>
         <td>{#if s.userId}<a href={href(`/users/${s.userId}`)}>{s.userName}</a>{:else}—{/if}</td>
         <td><a href={href(`/challenges/${s.challengeId}`)}>{s.challengeName}</a></td>
-        <td class="mono">{#if s.correct}<span class="badge ok">correct</span>{:else}{s.submitted}{/if}</td>
+        <td class="mono">{#if s.correct}<span class="badge ok">Correct</span>{:else}<span class="badge bad">Wrong</span> {s.submitted}{/if}</td>
         <td class="mono muted">{s.ip ?? "—"}</td>
       </tr>
     {:else}
@@ -73,4 +81,5 @@
     {/each}
   </tbody>
 </table>
+</div>
 {#if more}<div class="actions"><button onclick={older}>Older</button></div>{/if}

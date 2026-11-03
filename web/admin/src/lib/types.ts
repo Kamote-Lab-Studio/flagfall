@@ -60,7 +60,12 @@ export interface Submission {
 export interface Dashboard {
   state: string; playersOnline: number; teams: number; players: number; submissions: number;
   submissionsPerMinute: number; solves: number; warnings: string[];
-  challenges: { id: string; slug: string; name: string; category: string; state: string; solves: number; attempts: number; firstBloodTeam: string | null; firstBloodAt: string | null }[];
+  teamsWithSolves: number; solvesLastHour: number;
+  latestSolves: { teamId: string; teamName: string; challengeId: string; challengeName: string; points: number; solvedAt: string }[];
+  challenges: {
+    id: string; slug: string; name: string; category: string; difficulty: string | null; points: number; state: string;
+    solves: number; attempts: number; firstBloodTeam: string | null; firstBloodAt: string | null;
+  }[];
   services: ChallengeService[]; servicesEnabled: boolean;
 }
 

@@ -9,7 +9,8 @@
   import Markdown from "../components/Markdown.svelte";
   import ThemeFields from "../components/ThemeFields.svelte";
 
-  let { id }: { id: string } = $props();
+  // Shown beside the challenge list; onchange lets the list refresh.
+  let { id, onchange }: { id: string; onchange?: () => void } = $props();
 
   let c = $state<Challenge | null>(null);
   let error = $state("");
@@ -61,6 +62,7 @@
         themeFields: fromInputs(themeInfo.fields, themeInputs, c?.themeFields ?? {}),
       }));
       notify("Challenge saved.");
+      onchange?.();
     } catch (err) {
       errors = fieldErrors(err);
       notify(message(err), "error");
@@ -127,6 +129,7 @@
     try {
       await api.del(`/challenges/${id}`);
       notify("Challenge deleted.");
+      onchange?.();
       navigate("/challenges");
     } catch (err) {
       notify(message(err), "error");
@@ -136,20 +139,23 @@
   onMount(load);
 </script>
 
-<p><a href={href("/challenges")}>← Challenges</a></p>
 {#if error}<p class="notice bad">{error}</p>{/if}
 {#if c}
-  <h1>{c.name} <span class="badge" class:ok={c.state === "visible"} class:warn={c.state === "hidden"}>{c.state}</span></h1>
-  <p class="muted">{c.solves} solves · {c.attempts} attempts · worth {c.currentValue} now</p>
+  <div class="panel-head">
+    <h2 id="edit-title">Edit {c.name}</h2>
+    <a class="small link" href={href("/challenges")} aria-label="Close the editor">Close</a>
+  </div>
+  <p class="muted small"><span class="badge" class:ok={c.state === "visible"} class:warn={c.state === "hidden"}>{c.state}</span>
+    <span class="mono">{c.solves} solves · {c.attempts} attempts · worth {c.currentValue} now</span></p>
 
   {#if c.state === "visible" && c.flags.length === 0}
     <div class="notice">This challenge is visible but has no flag, so nobody can solve it.</div>
   {/if}
   {#each c.themeFieldWarnings as w (w)}<div class="notice">{w}</div>{/each}
 
-  <form class="card" onsubmit={save}>
+  <form class="panel pad" onsubmit={save} aria-labelledby="edit-title">
     <fieldset disabled={!editable}>
-      <div class="grid">
+      <div class="grid2">
         <label><span>Name</span><input bind:value={form.name} required />
           {#if errors.name}<div class="field-error">{errors.name}</div>{/if}</label>
         <label><span>Slug</span><input class="mono" bind:value={form.slug} required />
@@ -176,7 +182,7 @@
       <label><span>Tags (comma-separated)</span><input bind:value={form.tags} />
         {#if errors.tags}<div class="field-error">{errors.tags}</div>{/if}</label>
 
-      <div class="grid">
+      <div class="grid2">
         <label><span>Points</span><input type="number" min="0" bind:value={form.value} />
           {#if errors.value}<div class="field-error">{errors.value}</div>{/if}</label>
         {#if form.dynamic}
@@ -200,16 +206,16 @@
 
       {#if editable}
         <div class="actions">
-          <button class="primary" disabled={busy}>Save challenge</button>
-          <span class="spacer"></span>
+          <button class="primary grow" disabled={busy}>Save changes</button>
+          <a class="btn-line" href={"/challenges/" + c.slug} target="_blank" rel="noopener">View as player</a>
           <button type="button" class="danger" onclick={remove} disabled={c.solves > 0} title={c.solves > 0 ? "Solved challenges can't be deleted; retire it instead." : undefined}>Delete</button>
         </div>
       {/if}
     </fieldset>
   </form>
 
-  <h2>Flags</h2>
-  <div class="card">
+  <section class="panel pad stack" aria-labelledby="flags-title">
+    <h2 id="flags-title">Flags</h2>
     {#if c.flags.length === 0}<p class="empty">No flags yet.</p>{/if}
     <table>
       <tbody>
@@ -223,7 +229,7 @@
       </tbody>
     </table>
     {#if editable}
-      <form class="toolbar" style="margin:0.75rem 0 0" onsubmit={addFlag}>
+      <form class="toolbar" onsubmit={addFlag}>
         <select bind:value={flag.kind} aria-label="Flag kind">
           <option value="exact">Exact</option><option value="case-insensitive">Case-insensitive</option><option value="pattern">Pattern (regex)</option>
         </select>
@@ -232,10 +238,10 @@
       </form>
       <p class="hint">Exact and case-insensitive flags are stored hashed, so they can't be shown again.</p>
     {/if}
-  </div>
+  </section>
 
-  <h2>Hints</h2>
-  <div class="card">
+  <section class="panel pad stack" aria-labelledby="hints-title">
+    <h2 id="hints-title">Hints</h2>
     {#each hints as h, i (h.id ?? `new-${i}`)}
       <div class="hint-row">
         <label><span>Cost</span><input type="number" min="0" bind:value={h.cost} disabled={!editable} /></label>
@@ -252,10 +258,10 @@
         <button class="primary" onclick={saveHints}>Save hints</button>
       </div>
     {/if}
-  </div>
+  </section>
 
-  <h2>Files</h2>
-  <div class="card">
+  <section class="panel pad stack" aria-labelledby="files-title">
+    <h2 id="files-title">Files</h2>
     {#if c.files.length === 0}<p class="empty">No files.</p>{/if}
     <table>
       <tbody>
@@ -270,20 +276,19 @@
       </tbody>
     </table>
     {#if editable}
-      <label class="button" style="margin-top:0.75rem;display:inline-block">
+      <label class="button" style="align-self:flex-start">
         {uploading ? "Uploading…" : "Upload files"}
         <input class="sr-only" type="file" multiple onchange={upload} disabled={uploading} />
       </label>
     {/if}
-  </div>
+  </section>
 {/if}
 
 <style>
   fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
-  .hint-row { display: flex; gap: 0.75rem; align-items: flex-start; }
-  .hint-row label:first-child { width: 6rem; }
+  .hint-row { display: flex; gap: 10px; align-items: flex-start; }
+  .hint-row label:first-child { width: 80px; flex: none; }
   .hint-row .grow { flex: 1; }
-  .hint-row button { margin-top: 1.6rem; }
-  .hint-row textarea { min-height: 3rem; }
-  .spacer { flex: 1; }
+  .hint-row button { margin-top: 28px; }
+  .hint-row textarea { min-height: 64px; }
 </style>

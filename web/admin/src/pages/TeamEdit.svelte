@@ -6,7 +6,8 @@
   import type { Bracket, Paged, Team, TeamDetail, User } from "../lib/types";
   import { when } from "../lib/util";
 
-  let { id }: { id: string } = $props();
+  // Shown beside the team list; onchange lets the list refresh.
+  let { id, onchange }: { id: string; onchange?: () => void } = $props();
 
   let d = $state<TeamDetail | null>(null);
   let brackets = $state<Bracket[]>([]);
@@ -47,6 +48,7 @@
         ...form, country: form.country || null, captainId: form.captainId || null,
       }));
       notify("Team saved.");
+      onchange?.();
     } catch (err) {
       errors = fieldErrors(err);
       notify(message(err), "error");
@@ -59,6 +61,7 @@
     try {
       fill(await fn());
       if (done) notify(done);
+      onchange?.();
     } catch (err) {
       notify(message(err), "error");
     }
@@ -95,17 +98,23 @@
   onMount(load);
 </script>
 
-<p><a href={href("/teams")}>← Teams</a></p>
 {#if error}<p class="notice bad">{error}</p>{/if}
 {#if d}
-  <h1>{d.team.name}
-    {#if d.team.hidden}<span class="badge warn">hidden</span>{/if}
-    {#if d.team.banned}<span class="badge bad">banned</span>{/if}
-  </h1>
-  <p class="muted">Rank {d.team.rank ?? "—"} · {d.team.score} points · created {when(d.team.createdAt)}</p>
-
-  <form class="card" onsubmit={save}>
-    <div class="grid">
+  <form class="panel pad" onsubmit={save} aria-labelledby="team-title">
+    <div>
+      <div class="panel-head">
+        <h2 id="team-title">{d.team.name}</h2>
+        <a class="small link" href={href("/teams")} aria-label="Close the editor">Close</a>
+      </div>
+      <p class="muted small">
+        {#if d.team.country}<span class="mono">{d.team.country}</span>{" "}{/if}Rank {d.team.rank ?? "—"}, {d.team.score} points, {d.solves.length} {d.solves.length === 1 ? "solve" : "solves"}. Created {when(d.team.createdAt)}.
+      </p>
+      {#if d.team.hidden || d.team.banned}<div class="badges" style="margin-top:6px">
+        {#if d.team.hidden}<span class="badge warn">Hidden</span>{/if}
+        {#if d.team.banned}<span class="badge bad">Banned</span>{/if}
+      </div>{/if}
+    </div>
+    <div class="grid2">
       <label><span>Name</span><input bind:value={form.name} required />
         {#if errors.name}<div class="field-error">{errors.name}</div>{/if}</label>
       <label><span>Country (ISO code)</span><input bind:value={form.country} maxlength="2" />
@@ -123,36 +132,39 @@
     <label class="check"><input type="checkbox" bind:checked={form.hidden} /><span>Hidden from the public scoreboard</span></label>
     <label class="check"><input type="checkbox" bind:checked={form.banned} /><span>Banned</span></label>
     <label class="check"><input type="checkbox" bind:checked={form.prizeEligible} /><span>Eligible for prizes</span></label>
+    <div class="code-row">
+      <code>{d.team.inviteCode}</code>
+      <button type="button" class="small" onclick={() => act(() => api.post<TeamDetail>(`/teams/${id}/invite-code`), "New invite code made.")}>Reset code</button>
+    </div>
     <div class="actions">
-      <button class="primary" disabled={busy}>Save team</button>
-      <span class="muted">Invite code <code>{d.team.inviteCode}</code></span>
-      <button type="button" class="small" onclick={() => act(() => api.post<TeamDetail>(`/teams/${id}/invite-code`), "New invite code made.")}>New code</button>
+      <button class="primary grow" disabled={busy}>Save team</button>
+      <a class="btn-line" href={"/teams/" + id} target="_blank" rel="noopener">Public team page</a>
     </div>
   </form>
 
-  <h2>Members</h2>
-  <table>
-    <tbody>
-      {#each d.members as m (m.id)}
-        <tr>
-          <td><a href={href(`/users/${m.id}`)}>{m.name}</a> {#if m.id === d.team.captainId}<span class="badge">captain</span>{/if}</td>
-          <td>{m.email}</td>
-          <td class="num"><button class="small danger" onclick={() => removeMember(m)}>Remove</button></td>
-        </tr>
-      {:else}
-        <tr><td class="empty">No members.</td></tr>
-      {/each}
-    </tbody>
-  </table>
-  <div class="toolbar" style="margin-top:0.75rem">
+  <section class="panel pad stack" aria-labelledby="members-title">
+  <h2 id="members-title">Players</h2>
+  <ul class="member-list">
+    {#each d.members as m (m.id)}
+      <li>
+        <span><a href={href(`/users/${m.id}`)}>{m.name}</a> {#if m.id === d.team.captainId}<span class="badge">captain</span>{/if}</span>
+        <button class="small danger" onclick={() => removeMember(m)}>Remove</button>
+      </li>
+    {:else}
+      <li class="muted">No players.</li>
+    {/each}
+  </ul>
+  <div class="toolbar">
     <input type="search" placeholder="Find a user to add" aria-label="Find a user to add" bind:value={userSearch} oninput={findUsers} />
     {#each found.slice(0, 6) as u (u.id)}
       <button class="small" onclick={() => addMember(u)}>+ {u.name}{u.teamName ? ` (${u.teamName})` : ""}</button>
     {/each}
   </div>
   <p class="hint">Staff can add members past the team size limit.</p>
+  </section>
 
-  <h2>Solves</h2>
+  <section class="panel table-panel" aria-labelledby="solves-title">
+  <h2 id="solves-title">Solves</h2>
   <table>
     <tbody>
       {#each d.solves as s (s.challengeId)}
@@ -162,10 +174,12 @@
       {/each}
     </tbody>
   </table>
-  <p><a href={href(`/submissions?teamId=${id}`)}>See all submissions →</a></p>
+  <p style="padding: 8px 24px 14px"><a href={href(`/submissions?teamId=${id}`)}>See all submissions</a></p>
+  </section>
 
   {#if can("admin")}
-    <h2>Merge another team into this one</h2>
+    <section class="panel pad stack" aria-labelledby="merge-title">
+    <h2 id="merge-title">Merge another team into this one</h2>
     <div class="toolbar">
       <input type="search" placeholder="Find a team" aria-label="Find a team to merge" bind:value={mergeSearch} oninput={findTeams} />
       {#each mergeFound.slice(0, 6) as t (t.id)}
@@ -173,5 +187,6 @@
       {/each}
     </div>
     <p class="hint">Members and solves move here (the earlier solve wins); the other team is deleted.</p>
+    </section>
   {/if}
 {/if}
