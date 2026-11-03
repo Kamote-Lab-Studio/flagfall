@@ -1,6 +1,8 @@
 package api_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -19,7 +21,8 @@ func testTheme(t *testing.T, id, name string) *themes.Theme {
 	 "settings":[
 	  {"key":"accent","type":"color","label":"Accent","default":"#FFB000","cssVar":"--amber","contrastWith":"background"},
 	  {"key":"background","type":"color","label":"Background","default":"#0D1321","cssVar":"--bg"},
-	  {"key":"layout","type":"select","label":"Layout","default":"grid","options":[{"value":"grid","label":"Grid"},{"value":"list","label":"List"}]}]}`
+	  {"key":"layout","type":"select","label":"Layout","default":"grid","options":[{"value":"grid","label":"Grid"},{"value":"list","label":"List"}]},
+	  {"key":"logo","type":"image","label":"Logo","accept":["image/png","image/svg+xml"],"maxBytes":1024}]}`
 	th, err := themes.Load(fstest.MapFS{
 		"theme.json":      {Data: []byte(manifest)},
 		"dist/index.html": {Data: []byte("<html><head></head></html>")},
@@ -198,4 +201,61 @@ func TestThemeScheduledSwitch(t *testing.T) {
 		t.Fatalf("after cancel: %v", amber)
 	}
 	admin.must(404, "DELETE", "/admin/api/v1/themes/amber-phosphor/schedule", nil)
+}
+
+func TestThemeImages(t *testing.T) {
+	e, _ := themeEnv(t)
+	admin := e.staff("ada", "admin")
+	png := append([]byte("\x89PNG\r\n\x1a\n"), make([]byte, 64)...)
+	svg := []byte(`<?xml version="1.0"?><!-- logo --><svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`)
+
+	// Only image settings take uploads, and only in the formats they accept.
+	admin.upload(404, "/admin/api/v1/themes/neon/images/accent", "x.png", png)
+	admin.upload(404, "/admin/api/v1/themes/nope/images/logo", "x.png", png)
+	if r := admin.upload(400, "/admin/api/v1/themes/neon/images/logo", "x.png", []byte("GIF89a....")); r.str("error", "fields", "file") == "" {
+		t.Fatalf("gif: %s", r.raw)
+	}
+	if r := admin.upload(400, "/admin/api/v1/themes/neon/images/logo", "x.png", append(png, make([]byte, 2000)...)); !strings.Contains(r.str("error", "fields", "file"), "1 KB") {
+		t.Fatalf("too large: %s", r.raw)
+	}
+	e.signUp("pat").upload(403, "/admin/api/v1/themes/neon/images/logo", "x.png", png)
+
+	up := admin.upload(201, "/admin/api/v1/themes/neon/images/logo", "logo.png", png)
+	url := up.str("url")
+	if !strings.HasPrefix(url, "/theme-assets/") || up.str("contentType") != "image/png" {
+		t.Fatalf("upload = %s", up.raw)
+	}
+	svgURL := admin.upload(201, "/admin/api/v1/themes/neon/images/logo", "logo.svg", svg).str("url")
+
+	// Served publicly, cached forever, and an SVG can't run script.
+	res := e.client().do("GET", url, nil)
+	if res.status != 200 || res.header.Get("Content-Type") != "image/png" || !strings.Contains(res.header.Get("Cache-Control"), "immutable") {
+		t.Fatalf("serve png: %d %v", res.status, res.header)
+	}
+	res = e.client().do("GET", svgURL, nil)
+	if res.status != 200 || res.header.Get("Content-Type") != "image/svg+xml" || !strings.Contains(res.header.Get("Content-Security-Policy"), "sandbox") {
+		t.Fatalf("serve svg: %d %v", res.status, res.header)
+	}
+
+	// A challenge file's hash isn't served here.
+	c := e.addChallenge("secret", 100, "flag{x}")
+	secret := []byte("hidden challenge file")
+	admin.upload(201, sprintf("/admin/api/v1/challenges/%d/files", c.ID), "secret.bin", secret)
+	digest := sha256.Sum256(secret)
+	sum := hex.EncodeToString(digest[:])
+	if r := e.client().do("GET", "/theme-assets/"+sum, nil); r.status != 404 {
+		t.Fatalf("challenge blob served: %d", r.status)
+	}
+	if r := e.client().do("GET", "/theme-assets/not-a-hash", nil); r.status != 404 {
+		t.Fatalf("bad hash: %d", r.status)
+	}
+
+	// The draft takes uploaded images only.
+	bad := admin.must(400, "PUT", "/admin/api/v1/themes/neon/draft", map[string]any{"settings": map[string]any{"logo": "/theme-assets/" + sum}})
+	if bad.str("error", "fields", "settings.logo") == "" {
+		t.Fatalf("unuploaded image accepted: %s", bad.raw)
+	}
+	admin.must(400, "PUT", "/admin/api/v1/themes/neon/draft", map[string]any{"settings": map[string]any{"logo": "https://evil.example/x.png"}})
+	admin.must(200, "PUT", "/admin/api/v1/themes/neon/draft", map[string]any{"settings": map[string]any{"logo": url}})
+	admin.must(200, "PUT", "/admin/api/v1/themes/neon/draft", map[string]any{"settings": map[string]any{"logo": ""}})
 }

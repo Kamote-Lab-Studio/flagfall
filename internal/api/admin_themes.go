@@ -37,6 +37,7 @@ func (a *API) mountAdminThemes(r chi.Router) {
 	r.Get("/themes/{id}/versions", a.h(a.staff("admin", a.adminThemeVersions)))
 	r.Post("/themes/{id}/versions/{version}/restore", a.h(a.staff("admin", a.adminRestoreThemeVersion)))
 	r.Get("/themes/{id}/screenshots/{n}", a.h(a.staff("admin", a.adminThemeScreenshot)))
+	r.Post("/themes/{id}/images/{key}", a.h(a.staff("admin", a.adminUploadThemeImage)))
 }
 
 type themeSettingsView struct {
@@ -160,7 +161,11 @@ func (a *API) adminPutThemeDraft(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &in); err != nil {
 		return err
 	}
-	clean, bad := themes.CheckValues(t.Manifest.Settings, in.Settings, nil)
+	imageOK, err := a.themeImageCheck(r.Context())
+	if err != nil {
+		return err
+	}
+	clean, bad := themes.CheckValues(t.Manifest.Settings, in.Settings, imageOK)
 	fields := map[string]string{}
 	for k, msg := range bad {
 		fields["settings."+k] = msg
@@ -546,6 +551,10 @@ func (a *API) adminRestoreThemeVersion(w http.ResponseWriter, r *http.Request) e
 	}
 	ctx := r.Context()
 	user := currentUser(r)
+	imageOK, err := a.themeImageCheck(ctx)
+	if err != nil {
+		return err
+	}
 	var row *store.ThemeSettings
 	err = a.store.DB.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		old := new(store.ThemeSettings)
@@ -558,7 +567,7 @@ func (a *API) adminRestoreThemeVersion(w http.ResponseWriter, r *http.Request) e
 		// Settings saved for an older theme version may no longer fit.
 		values := map[string]any{}
 		_ = json.Unmarshal([]byte(old.Data), &values)
-		clean, _ := themes.CheckValues(t.Manifest.Settings, values, nil)
+		clean, _ := themes.CheckValues(t.Manifest.Settings, values, imageOK)
 		data, _ := json.Marshal(clean)
 		next, err := nextThemeVersion(ctx, tx, t.Manifest.ID)
 		if err != nil {

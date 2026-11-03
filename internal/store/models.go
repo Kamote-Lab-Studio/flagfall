@@ -262,3 +262,15 @@ type AuditEntry struct {
 	IP      *string   `bun:"ip"`
 	At      time.Time `bun:"at"`
 }
+
+// ThemeImage is an image uploaded for a theme setting. Its bytes are the
+// blob with the same SHA-256.
+type ThemeImage struct {
+	bun.BaseModel `bun:"table:theme_images"`
+
+	SHA256      string    `bun:"sha256,pk"`
+	ContentType string    `bun:"content_type"`
+	Size        int64     `bun:"size"`
+	UploadedBy  *int64    `bun:"uploaded_by"`
+	CreatedAt   time.Time `bun:"created_at"`
+}

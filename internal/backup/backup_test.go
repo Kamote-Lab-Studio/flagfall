@@ -64,6 +64,16 @@ func source(t *testing.T) (*store.Store, string, string) {
 	if _, err := s.DB.NewInsert().Model(&store.File{ChallengeID: c.ID, Name: "handout.txt", StorageKey: key, Size: int64(len(data)), SHA256: key}).Exec(ctx); err != nil {
 		t.Fatal(err)
 	}
+	// A theme image (logo) is a blob too, recorded in theme_images.
+	logo := []byte("<svg xmlns=\"http://www.w3.org/2000/svg\"/>")
+	logoSum := sha256.Sum256(logo)
+	logoKey := hex.EncodeToString(logoSum[:])
+	if err := os.WriteFile(filepath.Join(files, logoKey), logo, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.DB.NewInsert().Model(&store.ThemeImage{SHA256: logoKey, ContentType: "image/svg+xml", Size: int64(len(logo)), CreatedAt: time.Now()}).Exec(ctx); err != nil {
+		t.Fatal(err)
+	}
 	return s, files, key
 }
 
@@ -103,7 +113,7 @@ func top(t *testing.T, s *store.Store) string {
 func TestRoundTripIntoAnotherDatabase(t *testing.T) {
 	src, srcFiles, key := source(t)
 	zr, m := write(t, src, srcFiles)
-	if m.Rows["teams"] != 312 || m.Rows["users"] != 829 || m.Files != 1 || len(m.MissingFiles) != 0 {
+	if m.Rows["teams"] != 312 || m.Rows["users"] != 829 || m.Files != 2 || m.Rows["theme_images"] != 1 || len(m.MissingFiles) != 0 {
 		t.Fatalf("manifest = %+v", m)
 	}
 

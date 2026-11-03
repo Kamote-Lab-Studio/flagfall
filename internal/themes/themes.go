@@ -359,7 +359,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Get("/*", h.servePage)
 }
 
-var reserved = []string{"/api/", "/files/", "/admin", "/theme/", "/healthz"}
+var reserved = []string{"/api/", "/files/", "/admin", "/theme/", "/theme-assets/", "/healthz"}
 
 func (h *Handler) servePage(w http.ResponseWriter, r *http.Request) {
 	for _, p := range reserved {

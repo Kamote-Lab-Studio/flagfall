@@ -71,4 +71,11 @@ export function applySettings(settings: SettingValues) {
     const v = app.settings[s.key];
     if ("cssVar" in s && s.cssVar && typeof v === "string" && v) root.style.setProperty(s.cssVar, v);
   }
+  // An uploaded favicon replaces the bundled one.
+  const icon = setting("favicon");
+  const link = document.querySelector<HTMLLinkElement>("link[rel=icon]");
+  if (link && icon) {
+    link.href = icon;
+    link.removeAttribute("type");
+  }
 }

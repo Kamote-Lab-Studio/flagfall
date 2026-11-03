@@ -2,7 +2,7 @@
 //
 //	manifest.json          format, schema version, row counts
 //	tables/<name>.jsonl    one JSON object per row
-//	files/<sha256>         uploaded challenge files
+//	files/<sha256>         uploaded challenge files and theme images
 //
 // Rows are written through the typed store models, so a backup taken on
 // SQLite restores into PostgreSQL and the other way round. Sessions,
@@ -122,6 +122,7 @@ var tables = []table{
 	tbl[store.Page]("pages", false),
 	tbl[store.Theme]("themes", false),
 	tbl[store.ThemeSettings]("theme_settings", true),
+	tbl[store.ThemeImage]("theme_images", false),
 	tbl[store.AuditEntry]("audit_log", true),
 }
 
@@ -160,7 +161,24 @@ func Write(ctx context.Context, s *store.Store, files *blobs.Store, appVersion s
 				return err
 			}
 		}
-		return tx.NewSelect().Model((*store.File)(nil)).Distinct().Column("storage_key").Scan(ctx, &keys)
+		if err := tx.NewSelect().Model((*store.File)(nil)).Distinct().Column("storage_key").Scan(ctx, &keys); err != nil {
+			return err
+		}
+		// Theme images (logo, favicon) are blobs too.
+		var images []string
+		if err := tx.NewSelect().Model((*store.ThemeImage)(nil)).Column("sha256").Scan(ctx, &images); err != nil {
+			return err
+		}
+		seen := map[string]bool{}
+		for _, k := range keys {
+			seen[k] = true
+		}
+		for _, k := range images {
+			if !seen[k] {
+				keys = append(keys, k)
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err

@@ -110,6 +110,24 @@
     dirty = true;
   }
 
+  // Uploads the image, then puts its URL in the setting; saving the draft
+  // (or publishing) is what makes it count.
+  async function uploadImage(s: ThemeSetting, ev: Event) {
+    const input = ev.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !selected) return;
+    try {
+      const res = await api.upload<{ url: string }>(`/themes/${selected.id}/images/${s.key}`, "file", file);
+      values[s.key] = res.url;
+      errors = { ...errors, [`settings.${s.key}`]: "" };
+      changed();
+    } catch (err) {
+      errors = { ...errors, [`settings.${s.key}`]: fieldErrors(err).file ?? message(err) };
+    } finally {
+      input.value = "";
+    }
+  }
+
   async function saveDraft(): Promise<boolean> {
     if (!selected) return false;
     busy = true;
@@ -300,7 +318,16 @@
             {#if s.type === "boolean"}
               <label class="check"><input type="checkbox" bind:checked={values[s.key]} /><span>{s.label}</span></label>
             {:else if s.type === "image"}
-              <div class="setting"><span class="lbl">{s.label}</span><p class="hint">Image uploads are coming with the logo and favicon upload.</p></div>
+              <div class="setting">
+                <span class="lbl" id={`img-${s.key}`}>{s.label}</span>
+                <div class="image">
+                  {#if values[s.key]}<img src={values[s.key]} alt={`Current ${s.label.toLowerCase()}`} />{:else}<span class="none muted">None</span>{/if}
+                  <input type="file" aria-labelledby={`img-${s.key}`} accept={(s.accept ?? ["image/png", "image/svg+xml", "image/webp", "image/jpeg"]).join(",")} onchange={(ev) => uploadImage(s, ev)} />
+                  {#if values[s.key]}<button type="button" class="small" onclick={() => { values[s.key] = ""; changed(); }}>Remove</button>{/if}
+                </div>
+                {#if s.help}<span class="hint">{s.help}</span>{/if}
+                {#if err}<span class="field-error">{err}</span>{/if}
+              </div>
             {:else}
               <label class:wide={s.multiline}>
                 <span>{s.label}</span>
@@ -386,6 +413,11 @@
   .wide { grid-column: 1 / -1; }
   .color { display: flex; gap: 0.4rem; }
   .color input[type="color"] { width: 2.6rem; padding: 0.1rem; height: auto; }
+  .image { display: flex; align-items: center; gap: 0.6rem; }
+  .image img { width: 2.75rem; height: 2.75rem; object-fit: contain; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); }
+  .image .none { width: 2.75rem; text-align: center; font-size: 0.8rem; }
+  .image input[type="file"] { width: auto; flex: 1; min-width: 0; }
+  .setting .hint, .setting .field-error { display: block; margin-top: 0.25rem; }
   .lbl { display: block; color: var(--muted); font-size: 0.85rem; margin-bottom: 0.25rem; }
   label .hint, label .field-error { display: block; margin-top: 0.25rem; }
   .inline { margin: 0; }

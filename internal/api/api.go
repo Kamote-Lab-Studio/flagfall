@@ -176,6 +176,7 @@ func (a *API) Mount(r chi.Router) {
 	})
 
 	r.With(a.sessionMiddleware).Get("/files/{sha256}/{name}", a.h(a.downloadFile))
+	r.Get(themeAssetPrefix+"{sha256}", a.serveThemeAsset)
 }
 
 // ---------------------------------------------------------------- errors
