@@ -2,6 +2,8 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -185,3 +187,7 @@ func TestAuditLogRedactsSecrets(t *testing.T) {
 		t.Fatalf("entry = %v", entry)
 	}
 }
+
+func jsonUnmarshal(b []byte, v any) error { return json.Unmarshal(b, v) }
+
+func sprintf(format string, args ...any) string { return fmt.Sprintf(format, args...) }

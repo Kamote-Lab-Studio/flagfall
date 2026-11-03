@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -420,4 +421,62 @@ func orEmptyList(l []string) []string {
 		return []string{}
 	}
 	return l
+}
+
+// ValidSlug reports whether s can be a challenge slug.
+func ValidSlug(s string) bool { return slugRE.MatchString(s) }
+
+// StoreBlob streams r into dir under its SHA-256, the same content-addressed
+// layout Apply uses. It fails if r is larger than max bytes.
+func StoreBlob(dir string, r io.Reader, max int64) (sum string, size int64, err error) {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return "", 0, err
+	}
+	tmp, err := os.CreateTemp(dir, "upload-*.tmp")
+	if err != nil {
+		return "", 0, err
+	}
+	defer os.Remove(tmp.Name()) // no-op after the rename
+	h := sha256.New()
+	size, err = io.Copy(io.MultiWriter(tmp, h), io.LimitReader(r, max+1))
+	if cerr := tmp.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return "", 0, err
+	}
+	if size > max {
+		return "", 0, ErrTooLarge
+	}
+	sum = hex.EncodeToString(h.Sum(nil))
+	dst := filepath.Join(dir, sum)
+	if _, err := os.Stat(dst); err == nil {
+		return sum, size, nil
+	}
+	return sum, size, os.Rename(tmp.Name(), dst)
+}
+
+// ErrTooLarge means an upload went over its size limit.
+var ErrTooLarge = errors.New("file is too large")
+
+// LoadArchive reads challenge folders from a zip. The folders can be at the
+// top of the archive or inside a single top-level folder.
+func LoadArchive(zr fs.FS) ([]*Spec, error) {
+	if m, _ := fs.Glob(zr, "*/challenge.yml"); len(m) > 0 {
+		return Load(zr, ".")
+	}
+	entries, err := fs.ReadDir(zr, ".")
+	if err != nil {
+		return nil, err
+	}
+	var dirs []string
+	for _, e := range entries {
+		if e.IsDir() && !strings.HasPrefix(e.Name(), "__MACOSX") {
+			dirs = append(dirs, e.Name())
+		}
+	}
+	if len(dirs) == 1 {
+		return Load(zr, dirs[0])
+	}
+	return nil, fmt.Errorf("no */challenge.yml files found in the archive")
 }

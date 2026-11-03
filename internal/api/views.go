@@ -18,6 +18,20 @@ type idStr int64
 
 func (i idStr) MarshalJSON() ([]byte, error) { return json.Marshal(strconv.FormatInt(int64(i), 10)) }
 
+// UnmarshalJSON accepts "12" (what the API sends) or 12.
+func (i *idStr) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		s = string(b)
+	}
+	n, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return err
+	}
+	*i = idStr(n)
+	return nil
+}
+
 func timePtr(t time.Time) *time.Time {
 	if t.IsZero() {
 		return nil

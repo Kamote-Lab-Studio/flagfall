@@ -121,7 +121,10 @@ func (a *API) csrf(next http.Handler) http.Handler {
 		}
 		if r.ContentLength != 0 {
 			ct := r.Header.Get("Content-Type")
-			if ct != "application/json" && !hasPrefix(ct, "application/json;") {
+			// Admin file and pack uploads are multipart; the Origin check
+			// above is what protects them.
+			upload := hasPrefix(r.URL.Path, "/admin/api/") && hasPrefix(ct, "multipart/form-data;")
+			if !upload && ct != "application/json" && !hasPrefix(ct, "application/json;") {
 				writeError(w, &apiError{Status: 415, Code: "validation", Message: "Send JSON (Content-Type: application/json)."})
 				return
 			}
