@@ -30,8 +30,9 @@ code { color: var(--amber-2); }
 /* header */
 .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 32px; padding: 16px 40px; border-bottom: 1px solid var(--line); }
 .top-left, .top-right { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 32px; }
-.logo { display: flex; align-items: center; gap: 10px; font-size: 22px; }
-.logo-img { width: 28px; height: 28px; object-fit: contain; }
+.logo { display: flex; align-items: center; gap: 12px; font-size: 22px; }
+/* The icon stands taller than the wordmark beside it. */
+.logo svg, .logo-img { width: 44px; height: 44px; flex: none; object-fit: contain; }
 .wordmark { font-family: 'JetBrains Mono', monospace; font-weight: 800; letter-spacing: -0.02em; }
 .wordmark b { color: var(--amber); font-weight: 800; }
 .top nav { display: flex; flex-wrap: wrap; gap: 4px; }
