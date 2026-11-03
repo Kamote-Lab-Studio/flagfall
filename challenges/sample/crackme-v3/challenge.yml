@@ -13,5 +13,7 @@ flags:
 hints:
   - cost: 25
     content: hints/1.md
+files:
+  - dist/crackme
 theme_fields:
   location: {city: "Tokyo", lat: 35.68, lon: 139.69}

@@ -13,5 +13,8 @@ flags:
 hints:
   - cost: 25
     content: hints/1.md
+files:
+  - dist/oracle
+  - dist/check.vm
 theme_fields:
   location: {city: "Reykjavik", lat: 64.15, lon: -21.94}

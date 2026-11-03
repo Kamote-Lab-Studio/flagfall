@@ -10,6 +10,14 @@ description: description.md
 flags:
   - type: exact
     value: "flag{no_canary_no_mercy}"
-connection: "nc smasher.{{event_domain}} 31337"
+connection: "nc {{event_domain}} 31337"
+service:
+  image: ./Dockerfile
+  port: 31337
+  publish: 31337
+  memory: 64Mi
+  healthcheck: tcp
+files:
+  - dist/smasher
 theme_fields:
   location: {city: "Seoul", lat: 37.57, lon: 126.98}

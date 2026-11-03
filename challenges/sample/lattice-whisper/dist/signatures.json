@@ -1,0 +1,306 @@
+{
+  "curve": "P-256",
+  "hash": "SHA-256",
+  "signatures": [
+    {
+      "msg": "telemetry batch 000: all systems nominal",
+      "r": "5c6563017c224deb9511a7bb005846e5d78b1e10dc2880ea55eea75c09114530",
+      "s": "76186e845bc48e182640fd1aeba366b78d5f7544eb5e51116d0ab88e98afeaaf"
+    },
+    {
+      "msg": "telemetry batch 001: all systems nominal",
+      "r": "fc8fdaea8f611384ad0ccc3fb55fe2b9e67be7caf0f5a43453575f37d81c181d",
+      "s": "e11127864305c9ef7d4c45a4d0df9603b891a277d84b17d0e3c965d37bafef59"
+    },
+    {
+      "msg": "telemetry batch 002: all systems nominal",
+      "r": "4cfd47cf3f1d8e9e5afeadcf74d1e85015874b093b409cf47f85f5152bc72d76",
+      "s": "6617415a62caff6f1ff4ed3b42ba1e5cd61c4fe306f21c7605d5777afcd869ac"
+    },
+    {
+      "msg": "telemetry batch 003: all systems nominal",
+      "r": "7f006ce1a7aa038a51c053f297f55c36afdefb0be68841e64f2e301a687bfdf4",
+      "s": "18fc2d1f2f848b2dfbb38562f80f2a9118af11148da7aa0d07ad60cb9aaa10ac"
+    },
+    {
+      "msg": "telemetry batch 004: all systems nominal",
+      "r": "f5e880511570824340118afcb9e722fafdca8b7e109a508b618c4de902a4dee6",
+      "s": "3217edfe75611d1bea0b7e3d6e0e1669a5f064a0307e479d62f3f76ba8450a5a"
+    },
+    {
+      "msg": "telemetry batch 005: all systems nominal",
+      "r": "3085f9b41315d2b7719b21ff6f32c955a6bd07e80a50746ae2b28226dde42bcd",
+      "s": "1c988701792d1bdebfac5162f4d7e0244805f263fd687087fb0dc1e5b85e79de"
+    },
+    {
+      "msg": "telemetry batch 006: all systems nominal",
+      "r": "52d98d9f4e9d083b4fd8917fd63e75986bb08a890fd6dc3ef9ac5c6369867277",
+      "s": "8c2b999003837330650ff7bbd0595cc848b10625de5b331d2b7cfc6bcdbc6f9d"
+    },
+    {
+      "msg": "telemetry batch 007: all systems nominal",
+      "r": "98679d954576e4dfe81c477cd4d70ccf4bbd5141635fe8bd54392e5797bda91c",
+      "s": "7ad467c4515e824a31cf7a934030d5a4205125007d3c0d8369b7413d602dd8d9"
+    },
+    {
+      "msg": "telemetry batch 008: all systems nominal",
+      "r": "a8b829ddcc0b5d66192d9a10764beee93da9738b44fa6c85aa53b8de690d3b40",
+      "s": "529a4a0766f25dd4c4f8d5209d07572f831932cbf4bde61ca9eb1d69472fb0e9"
+    },
+    {
+      "msg": "telemetry batch 009: all systems nominal",
+      "r": "7333a63915592eb21b94c671d4c728ce02190cf718670f6278abe03f84988f49",
+      "s": "ae65db4a589d7f9fd68340864f942f6bb12d0fdfdcefffe70ae7ee32bad45f76"
+    },
+    {
+      "msg": "telemetry batch 010: all systems nominal",
+      "r": "e6fd533d2b7f59d96dadbcbdfaf95870b5e7b8ddc7e4276f845db8bc2312b90e",
+      "s": "c44763722a81314b1956168493548214d9a0a3def1de154785af20e7cd333838"
+    },
+    {
+      "msg": "telemetry batch 011: all systems nominal",
+      "r": "3c62284cdabd303f537cf0a30e225fd88a7b39f9b21f522fa3201bb332d2def1",
+      "s": "ea76dc81f91e4252bf9ca6dcb6cdfb66839f59d4d836aa9ba2e2f3f25e91c454"
+    },
+    {
+      "msg": "telemetry batch 012: all systems nominal",
+      "r": "8f51ec104313457a25fa482bed248b82ffac0e6a7a9b49cce3fdab5b886768e3",
+      "s": "507fa5542bb9cfe12aad432fc94a8587337cf9d0182ae0cfed8aa242cd3f1a94"
+    },
+    {
+      "msg": "telemetry batch 013: all systems nominal",
+      "r": "8586f02b7ffdfb99782e2c2edaec407a288d33c03a533dbdabe096b4abfa3b8e",
+      "s": "d0db6f03fdea0ba6dfa17fe945d5a7c93aafcc42b3912f163febee9ad27c0427"
+    },
+    {
+      "msg": "telemetry batch 014: all systems nominal",
+      "r": "37fb26206864e0fecaf5248d3e8b9ad8e699b36178900cfd81fdd94cb46d5b39",
+      "s": "7cddaa4389b9e5628e5d7d26f0e5fc7467c6ec8832884a2e7879b6da1b06e759"
+    },
+    {
+      "msg": "telemetry batch 015: all systems nominal",
+      "r": "417f5e194524cbc39fdfc59f01dd9b139d739b6b6b4641644de543140166fec3",
+      "s": "e708fe023410774554e77e78870aacfd584874414a7532fcf153fe450b45042b"
+    },
+    {
+      "msg": "telemetry batch 016: all systems nominal",
+      "r": "a1799b7a4d08443fa05edd33f61ac29ce7014e9ef886d82fdd5234496a6cc2d",
+      "s": "72b471ef5d233290f153253aefe7cef64155192debe6a3913aadbeec1efa1337"
+    },
+    {
+      "msg": "telemetry batch 017: all systems nominal",
+      "r": "ae592823f7e9e83c7cf488765fe3e6a9a3fb7a821f2148c088a5fc2fb245b7df",
+      "s": "4d2e7ff14f22f791b01b89ba8315d6c89e67bfd5f0b4946e20c08d4ef54d61d6"
+    },
+    {
+      "msg": "telemetry batch 018: all systems nominal",
+      "r": "1d00a09de150fd11221cd166156e32b76cf57008296d94b07aacf23e92b672b6",
+      "s": "a13816f19779882536a612e57cea0a6dc23ac6797306bf3e2f91d2052c7b5fd7"
+    },
+    {
+      "msg": "telemetry batch 019: all systems nominal",
+      "r": "914bfc545c7691f2b27d6a0b323dd96afd2f5ca4ca23bee0a20523befe322155",
+      "s": "19e88d8e557764d70cff1bfa0a67fc98bb7af7aa3ac5ef0e18da512d119da1ec"
+    },
+    {
+      "msg": "telemetry batch 020: all systems nominal",
+      "r": "b351b64d5163344e49197c19daab6a0b519c09ec70c02a4660f8b5ff6bc3001a",
+      "s": "5cd52ca56d7cca6bf339d8d5adbfb4213c9b0aad860ae8d6f835d2c7b2d337e9"
+    },
+    {
+      "msg": "telemetry batch 021: all systems nominal",
+      "r": "c486eb49bbd18493afee9d3fdc1075be8854b83259412fa278590668ee324af",
+      "s": "2f0906cdd42f016356c54b9c9f307ab0ffd6735e5e7e2de20bd335798a14e709"
+    },
+    {
+      "msg": "telemetry batch 022: all systems nominal",
+      "r": "2ce025681698ffa2e62510c781d9770d4142aa5c725e0f6b1d4edd060a201132",
+      "s": "46281c3f96a1366aca0b98882dce8793db251d2bbb71f19fce2a9b19dd95bb4a"
+    },
+    {
+      "msg": "telemetry batch 023: all systems nominal",
+      "r": "afe3c68908b8bb7c7cb841e344e2a3833dd1b638df6c6b150f78a7332a346b13",
+      "s": "72ac24fd0243be0ad712d1ef7640d671545700e79a9918e6d8fb8b0aa0ad7416"
+    },
+    {
+      "msg": "telemetry batch 024: all systems nominal",
+      "r": "977ba35adbe5f87722f556069529eadc5ea16648f9db79546cc235724b882d95",
+      "s": "5c97fec05f08adf2c00055dfc0bfb813ea8c759e14354f6e1087083989df67cb"
+    },
+    {
+      "msg": "telemetry batch 025: all systems nominal",
+      "r": "ca089887b8180bf200a5d262673ce780eb5f43096a3acecda2e0b62c4e2a325c",
+      "s": "573018466040307353fffbbdde081770c9ed80f36194dcfde309f8a2342285aa"
+    },
+    {
+      "msg": "telemetry batch 026: all systems nominal",
+      "r": "f9cb5ff559cfb05eee056f111a74eee6fd495c1e0ef745b930d7c20c0f3563e7",
+      "s": "f39d2000e2637e5bbe563c7e3d4a16c39d2b134e54728bc6679c53bd4dc20977"
+    },
+    {
+      "msg": "telemetry batch 027: all systems nominal",
+      "r": "3117e7f0330d9c1353e06313c5ce2b11bcdd19ac6c490924ab72fabe0ad0050",
+      "s": "cec15acbdf7d481d1f85cb2e8963331ab3ad5a75a7b7eebbe6a9622ae2e72084"
+    },
+    {
+      "msg": "telemetry batch 028: all systems nominal",
+      "r": "ffc1f48819e7c4d61f99831b78807fa92a9eac8f9c437b1d584c8a4e62ddb55c",
+      "s": "3dc327df10c4ab4995ccea30a6c3912e4c589453f9276ac0bb55c2b09f2ab9e9"
+    },
+    {
+      "msg": "telemetry batch 029: all systems nominal",
+      "r": "781c1ffac2dab0e282f8c0b0c6363fa92dc271c62c70fb8eea4a80c5f09e2032",
+      "s": "a9585ec150aee3cbe75744452ee41c7ea51270c3623babd9c872a148bed748f5"
+    },
+    {
+      "msg": "telemetry batch 030: all systems nominal",
+      "r": "584994e7b028bcf5a87746a29e0143de7dfda587c5d4b49323ae00340f37c6db",
+      "s": "27798e6a3a7a6602594cfe69a9873c22cf866c7b341a8115f6c8089547c7ae1d"
+    },
+    {
+      "msg": "telemetry batch 031: all systems nominal",
+      "r": "694a7bfbcac63d3f74c5b522f2afe54e0f9620c64fb790a9e66b7e8f646bd0ab",
+      "s": "cc4bd68c67bdcf36f4ce45869b2aecf5bfa0004066d341b9dde5082d9b9151eb"
+    },
+    {
+      "msg": "telemetry batch 032: all systems nominal",
+      "r": "234700dcb749e6c5a7046fc1dc8323add5ba2fdbd7897edb1ae88bc5165395c4",
+      "s": "7c9143d2174844d19f5a6bc0bcd6e09f676213ae05328fc4264e36713a2da220"
+    },
+    {
+      "msg": "telemetry batch 033: all systems nominal",
+      "r": "6a5bd46ebeb85c6e826e0a25bf22cbbf3f9d1dca72e7adea5166097d371b4fd8",
+      "s": "b54dcdd73443285e72b2a2cca75452cf42e98cc95b07f616dc4e04f79c3c4436"
+    },
+    {
+      "msg": "telemetry batch 034: all systems nominal",
+      "r": "304b0765df7a0b91819b902a5bfdccfca0ab82956ed65ca1aa1b35a832234ece",
+      "s": "d65cb92ebcc1a912a774120f68741c018f96a4fb8194b342646bdd601537e31a"
+    },
+    {
+      "msg": "telemetry batch 035: all systems nominal",
+      "r": "4d5829c8ebc6783425cc7ea8692653e641e5dfdfa2d42b45dda56d41d1410404",
+      "s": "4a317e7bcf2f44e4b6676d4a033e2d69e42520b1a6affe449715abe81d8c0d3"
+    },
+    {
+      "msg": "telemetry batch 036: all systems nominal",
+      "r": "e14464b3858c7eaac57371274d9d9e5e2b3e6cbd97c9f8dd6ec16c6b8fe2ef13",
+      "s": "975b32ac4d0a7c395619a1e2c6b8ca32526e5e84e363c45e9394bdc6a7eb07de"
+    },
+    {
+      "msg": "telemetry batch 037: all systems nominal",
+      "r": "58fe2251b1ee46438f677f609fe89b0225040071aa0fcffaafc26de25b8ef688",
+      "s": "72446893e69850fbd6dbb992045d26e8d2492ca3f1d873de551de476abac920b"
+    },
+    {
+      "msg": "telemetry batch 038: all systems nominal",
+      "r": "4a329a106bed5b02fd78a16a92a843492ba4ca482a1a36813242d78eb813105d",
+      "s": "301cd861d73c9d4d9c85ab1e6627e365776aac42483e36a5dd729dc8670c224d"
+    },
+    {
+      "msg": "telemetry batch 039: all systems nominal",
+      "r": "62bde7cb20edb012dca44f56297b1dfa3371e596b67c5505d7c24fa22d2fdf48",
+      "s": "fff935d4f88f7a1500149c7470f229e161094b1dde89aaaf969aa189f8eb47ad"
+    },
+    {
+      "msg": "telemetry batch 040: all systems nominal",
+      "r": "bb6e35e0786ceb616862b700eb0fa419c9f3af35892d9fcac9a921049fbc9393",
+      "s": "23094edc6011693ec076ef6832b9aa59e4d9eef03c34d0838311b41922830be4"
+    },
+    {
+      "msg": "telemetry batch 041: all systems nominal",
+      "r": "a83392ba62dd27887aab81ecb596ac1e067314c4a5382bb4f759037ee1221085",
+      "s": "3bfbbcd96d8c68842c0b4273fe9229a2070e29fb64e7e4b07c083d5771bed604"
+    },
+    {
+      "msg": "telemetry batch 042: all systems nominal",
+      "r": "4669d77a7813aec70e75f70fff2e0810f3e7fafe9e6f0e90c4736afe2c5cffc0",
+      "s": "b27182a624db3855bf9abeab3a3a95ab9a5255c6eb6680c70140fb2e3e459fac"
+    },
+    {
+      "msg": "telemetry batch 043: all systems nominal",
+      "r": "d46126cddfaea9a07f114f64b7c212a174f190c4f4170f46e688cc9015db8651",
+      "s": "55cc316e75b8beb651597eb0eeaca0c6d114b88b7291dff320c225377f0b1112"
+    },
+    {
+      "msg": "telemetry batch 044: all systems nominal",
+      "r": "5885553d5e024fcd431d1cfc62ba51f119553f95b0f96204390d728908daf0ea",
+      "s": "2ec8fea2d90efadde8fbf5f9d84f118d8cfba45a9b9e014d7d79dcd109b1eb52"
+    },
+    {
+      "msg": "telemetry batch 045: all systems nominal",
+      "r": "5bb0b4b984d9fcea2b8c3a8a2ae414cbfe6bb8154cd7d922d3f88eab49333887",
+      "s": "8f782eac27b559fe46a212777b8a0e1f88b89db8110bc059fb3e1cf39e5c1b59"
+    },
+    {
+      "msg": "telemetry batch 046: all systems nominal",
+      "r": "24a8f74fcd323ee17b2d0b25ced67992ccd457526d6f8458eea8bb3f297613b7",
+      "s": "e4b9c860fb6486f86c616bcd67f492a96bc86537078b8ea7065f06af6052c267"
+    },
+    {
+      "msg": "telemetry batch 047: all systems nominal",
+      "r": "fbb6d1bf4fa0b06d26a618db6915c3bd322b2f9dc47cbb08446bdb16f0e4e168",
+      "s": "47605121f96122dc1287cc1cbd9b63e70dcd476d9c9aae97fd2c56b21878ee1d"
+    },
+    {
+      "msg": "telemetry batch 048: all systems nominal",
+      "r": "f7071815c4c523dcf09da87352c44291f89b7382c2d5131864a7cf67b0e305ca",
+      "s": "7964cd25485c5b9922bb66bbff004b53100c28aa070b1baa20d4e74d930cfbb4"
+    },
+    {
+      "msg": "telemetry batch 049: all systems nominal",
+      "r": "4956e549c602ab5e4232b2af649183e463459b920a1a40c7f0f211aac4726d2f",
+      "s": "2db3cf05baefae03c60aecbfcd0da37970f61e31665b21a779d3522b168a2602"
+    },
+    {
+      "msg": "telemetry batch 050: all systems nominal",
+      "r": "f36f45fd33c9f1ad72aee4aad5fa0cd95c13f0c92df286c963b274f4b922cb6b",
+      "s": "2467d717ba952665e8ca60b7abad7f9160bc60c02481153c6ee2fa0aa15f6dc5"
+    },
+    {
+      "msg": "telemetry batch 051: all systems nominal",
+      "r": "8388d05ed74a5677b7f5d0d6b050be7f8565f74e158c53ea0b897f568e94169c",
+      "s": "4ca7a7eb4115b9a54ad71762a07c6b3f278ddaf487b735639906d63d745f7330"
+    },
+    {
+      "msg": "telemetry batch 052: all systems nominal",
+      "r": "9baa25b10a2d4a941556297e81c98c805194618dbc7e2fbf77e1f929b6c3bbf9",
+      "s": "42d0ddf2aca838daf2df0b966bd44fac5079787689b9f6c44138420bb5752ae0"
+    },
+    {
+      "msg": "telemetry batch 053: all systems nominal",
+      "r": "c08545d5cb970252ce2eb28a08ae65392a87c52cb2734c1d8d290cb4c95ce71f",
+      "s": "a56ebd5c6ea18f5cbb9c04ff69b1980d85ddf8e4b1df14794a3ff57f5bd497fe"
+    },
+    {
+      "msg": "telemetry batch 054: all systems nominal",
+      "r": "636ff7e04f78caa5a9394f8377062831baf8d8e68a3da74abd499fa8c24c2341",
+      "s": "79176533903544c1186b638305a6e822a580c332e22ff11e0c2d4e7bbc3ad6b6"
+    },
+    {
+      "msg": "telemetry batch 055: all systems nominal",
+      "r": "821823ad76f1baec6599d5f3680317682f88b39c563cf8d382da75708748ff2",
+      "s": "cecd23d9054d53fccaffdcd7965313cc87556acd14d3b7410063ca87890c456a"
+    },
+    {
+      "msg": "telemetry batch 056: all systems nominal",
+      "r": "c6c213d8826ad2b8ba2b2a75340eb10bf6e09506c757f861cfc44e6b2d11b430",
+      "s": "f86bd59fcbf9ab9c585cf68cc4c823e1095bc6f069a9aae4ca42781f72950dbc"
+    },
+    {
+      "msg": "telemetry batch 057: all systems nominal",
+      "r": "c30a5d73adb37bdf18ff206c41006ea84add56b8c9a5bd36cea38acc43afe84",
+      "s": "f8224c6f16311bd95f4398489d746b23f0986106f12931c5a07649335d45e6ab"
+    },
+    {
+      "msg": "telemetry batch 058: all systems nominal",
+      "r": "8ad23069678233d96811e9f6ee9ff961013408bdca8ea442118a01c6c517c19b",
+      "s": "183cac8d282c4bd14f458b97a0a717469f291612320c54df342d07e3723f0e78"
+    },
+    {
+      "msg": "telemetry batch 059: all systems nominal",
+      "r": "2245ee96de7dd2a6a288136ff82bc57e539a26011c48292ec78cf0ebad1848ca",
+      "s": "b7fd4242932933a875121bf40f6b6600c0479aa3998c507aef063c03b592d187"
+    }
+  ]
+}

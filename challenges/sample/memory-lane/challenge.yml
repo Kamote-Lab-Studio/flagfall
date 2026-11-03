@@ -13,5 +13,7 @@ flags:
 hints:
   - cost: 25
     content: hints/1.md
+files:
+  - dist/memory.raw.gz
 theme_fields:
   location: {city: "Manila", lat: 14.6, lon: 120.98}

@@ -13,5 +13,9 @@ flags:
 hints:
   - cost: 25
     content: hints/1.md
+files:
+  - dist/signatures.json
+  - dist/flag.enc
+  - dist/chall.py
 theme_fields:
   location: {city: "Zurich", lat: 47.37, lon: 8.54}

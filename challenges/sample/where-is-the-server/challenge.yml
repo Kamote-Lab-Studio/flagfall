@@ -10,5 +10,7 @@ description: description.md
 flags:
   - type: exact
     value: "flag{frankfurt_hetzner}"
+files:
+  - dist/rack.jpg
 theme_fields:
   location: {city: "Frankfurt", lat: 50.11, lon: 8.68}

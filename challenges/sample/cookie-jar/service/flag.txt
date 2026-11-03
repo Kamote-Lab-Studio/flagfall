@@ -1,0 +1,1 @@
+flag{c00kies_are_not_a_session}

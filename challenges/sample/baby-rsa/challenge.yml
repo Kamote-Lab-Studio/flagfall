@@ -10,5 +10,8 @@ description: description.md
 flags:
   - type: exact
     value: "flag{cube_root_of_all_evil}"
+files:
+  - dist/output.txt
+  - dist/chall.py
 theme_fields:
   location: {city: "Cairo", lat: 30.04, lon: 31.24}
