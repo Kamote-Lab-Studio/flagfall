@@ -66,7 +66,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 func serve(logOut io.Writer) error {
 	logger := slog.New(slog.NewTextHandler(logOut, nil))
 
-	cfg, err := config.FromEnv(os.LookupEnv)
+	cfg, err := config.Load(os.LookupEnv)
 	if err != nil {
 		return err
 	}
