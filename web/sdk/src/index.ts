@@ -1,9 +1,5 @@
 /**
- * @flagfall/theme-sdk: public API.
- *
- * PHASE 0 STATUS: this file is the design, written as type signatures only.
- * It is type-checked in CI so the design stays consistent; the implementation
- * comes in Phase 1. Review comments go on the pull request that changes it.
+ * @flagfall/theme-sdk: everything a theme needs to talk to Flagfall.
  *
  * Rules the SDK enforces for themes:
  *  - It only talks to the player API (/api/v1). It has no admin functions,
@@ -11,6 +7,8 @@
  *  - Errors are thrown as FlagfallError with a stable `code`.
  *  - Everything a theme shows that can change during an event (scoreboard,
  *    solves, announcements, event state, theme) is available live.
+ *
+ * See docs/dev/sdk.md.
  */
 
 import type {
@@ -32,8 +30,11 @@ import type {
   Team,
   TeamSummary,
 } from "./types.js";
+import { createLive } from "./live.js";
+import { createThemeContext, type ThemeInfo } from "./theme.js";
 
 export type * from "./types.js";
+export { relativeTime, formatDuration } from "./format.js";
 
 // ---------------------------------------------------------------- Client
 
@@ -42,6 +43,8 @@ export interface ClientOptions {
   baseUrl?: string;
   /** Override fetch, for tests. */
   fetch?: typeof fetch;
+  /** Override EventSource, for tests. */
+  EventSource?: typeof EventSource;
 }
 
 export interface Paged<T> {
@@ -69,8 +72,8 @@ export interface Flagfall {
   };
 
   teams: {
-    list(query?: { bracketId?: ID; search?: string; recruiting?: boolean; page?: number }): Promise<Paged<TeamSummary>>;
-    get(id: ID): Promise<Team>;
+    list(query?: { bracketId?: ID; search?: string; recruiting?: boolean; page?: number; pageSize?: number }): Promise<Paged<TeamSummary>>;
+    get(id: ID): Promise<Team | MyTeam>;
     create(input: { name: string; country?: string; bracketId: ID }): Promise<MyTeam>;
     join(inviteCode: string): Promise<MyTeam>;
     leave(): Promise<void>;
@@ -109,10 +112,10 @@ export interface Flagfall {
   };
 
   live: LiveConnection;
-  theme: ThemeContext;
-}
 
-export declare function createClient(options?: ClientOptions): Flagfall;
+  /** Loads theme settings and messages. Call once before rendering. */
+  loadTheme(): Promise<ThemeContext>;
+}
 
 // ---------------------------------------------------------------- Live updates
 
@@ -122,12 +125,12 @@ export interface LiveConnection {
   /**
    * Listen for one type of live event. Returns a function that removes the
    * listener. The connection opens on the first subscription and reconnects
-   * with backoff on its own.
+   * on its own.
    *
    * "theme-published" is handled by the SDK by default (it reloads the page);
    * subscribing replaces that behaviour.
    */
-  on<T extends LiveEventType>(type: T, handler: (data: LiveEventData<T>) => void): () => void;
+  on<T extends LiveEventType | "resync">(type: T, handler: (data: T extends LiveEventType ? LiveEventData<T> : Record<string, never>) => void): () => void;
   readonly status: LiveStatus;
   onStatus(handler: (status: LiveStatus) => void): () => void;
   close(): void;
@@ -139,28 +142,128 @@ export interface LiveConnection {
 export type SettingValues = Record<string, string | number | boolean | null>;
 
 export interface ThemeContext {
-  /** The theme's id from theme.json. */
   readonly id: string;
-  /** Published settings, or the draft while an admin is previewing. */
+  /** Published settings; empty until an organizer customizes the theme. Merge over your own defaults. */
   readonly settings: SettingValues;
   /** True in admin preview mode; themes should keep the preview banner visible. */
   readonly preview: boolean;
-  /** Current locale, e.g. "en" or "fil". */
   readonly locale: string;
   /**
    * Translate a message key. Looks up the organizer's wording overrides first,
-   * then the theme's message files, then the SDK defaults.
+   * then the theme's messages, then the SDK defaults; falls back to the key.
    */
   t(key: string, vars?: Record<string, string | number>): string;
+  /** Register the theme's own messages for a locale. */
+  addMessages(locale: string, messages: Record<string, string>): void;
   /** Fires when settings change during preview. */
   onSettingsChange(handler: (settings: SettingValues) => void): () => void;
 }
 
 // ---------------------------------------------------------------- Errors
 
-export declare class FlagfallError extends Error {
+export class FlagfallError extends Error {
   readonly code: ErrorCode;
   readonly status: number;
   readonly fields: Record<string, string>;
-  constructor(status: number, body: ApiErrorBody);
+
+  constructor(status: number, body: ApiErrorBody | null) {
+    super(body?.error.message ?? `Request failed (${status})`);
+    this.name = "FlagfallError";
+    this.status = status;
+    this.code = body?.error.code ?? (status >= 500 ? "internal" : "validation");
+    this.fields = body?.error.fields ?? {};
+  }
+}
+
+// ---------------------------------------------------------------- Implementation
+
+export function createClient(options: ClientOptions = {}): Flagfall {
+  const base = (options.baseUrl ?? "").replace(/\/$/, "");
+  const doFetch = options.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
+
+  async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
+    const init: RequestInit = { method, credentials: "same-origin", headers: { Accept: "application/json" } };
+    if (body !== undefined) {
+      init.body = JSON.stringify(body);
+      init.headers = { ...init.headers, "Content-Type": "application/json" };
+    }
+    const res = await doFetch(base + "/api/v1" + path, init);
+    if (res.status === 204) return undefined as T;
+    const text = await res.text();
+    let data: unknown = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+    if (!res.ok) throw new FlagfallError(res.status, data as ApiErrorBody | null);
+    return data as T;
+  }
+
+  const get = <T>(path: string) => call<T>("GET", path);
+  const post = <T>(path: string, body?: unknown) => call<T>("POST", path, body ?? {});
+  const qs = (q: Record<string, string | number | boolean | undefined> = {}) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "") p.set(k, String(v));
+    const s = p.toString();
+    return s ? "?" + s : "";
+  };
+  const enc = encodeURIComponent;
+
+  const live = createLive(base + "/api/v1/live", options.EventSource);
+
+  return {
+    event: { get: () => get<Event>("/event") },
+
+    auth: {
+      me: () => get<Me | null>("/me"),
+      signIn: (input) => post<Me>("/auth/sign-in", input),
+      signUp: (input) => post<Me>("/auth/sign-up", input),
+      signOut: () => post<void>("/auth/sign-out"),
+      requestPasswordReset: (email) => post<void>("/auth/password-reset", { email }),
+      resetPassword: (input) => post<void>("/auth/password-reset/confirm", input),
+      updateAccount: (input) => call<Me>("PATCH", "/me", input),
+      changePassword: (input) => post<void>("/me/password", input),
+    },
+
+    teams: {
+      list: (q) => get<Paged<TeamSummary>>("/teams" + qs(q)),
+      get: (id) => get<Team | MyTeam>("/teams/" + enc(id)),
+      create: (input) => post<MyTeam>("/teams", input),
+      join: (inviteCode) => post<MyTeam>("/teams/join", { inviteCode }),
+      leave: () => post<void>("/teams/leave"),
+      update: (input) => call<MyTeam>("PATCH", "/teams/mine", input),
+      regenerateInviteCode: () => post<MyTeam>("/teams/mine/invite-code"),
+      removeMember: (userId) => call<MyTeam>("DELETE", "/teams/mine/members/" + enc(userId)),
+      transferCaptain: (userId) => post<MyTeam>("/teams/mine/captain", { userId }),
+    },
+
+    challenges: {
+      list: () => get<ChallengeSummary[]>("/challenges"),
+      get: (slug) => get<Challenge>("/challenges/" + enc(slug)),
+      submitFlag: (slug, flag) => post<FlagResult>("/challenges/" + enc(slug) + "/submit", { flag }),
+      unlockHint: (slug, hintId) => post<{ id: ID; content: string }>("/challenges/" + enc(slug) + "/hints/" + enc(hintId) + "/unlock"),
+    },
+
+    scoreboard: {
+      get: (q) => get<Scoreboard>("/scoreboard" + qs(q)),
+      series: (q) => get<ScoreSeries[]>("/scoreboard/series" + qs(q)),
+    },
+
+    announcements: { list: () => get<Announcement[]>("/announcements") },
+
+    pages: {
+      get: (slug) => get<Page>("/pages/" + enc(slug)),
+      list: () => get<Pick<Page, "slug" | "title">[]>("/pages"),
+    },
+
+    live,
+
+    loadTheme: async () => createThemeContext(await get<ThemeInfo>("/theme")),
+  };
+}
+
+/** True if err is a FlagfallError with one of the given codes. */
+export function isError(err: unknown, ...codes: ErrorCode[]): err is FlagfallError {
+  return err instanceof FlagfallError && (codes.length === 0 || codes.includes(err.code));
 }

@@ -6,7 +6,6 @@
     "lib": ["ES2022", "DOM"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
     "declaration": true,
     "isolatedModules": true,
     "skipLibCheck": true
