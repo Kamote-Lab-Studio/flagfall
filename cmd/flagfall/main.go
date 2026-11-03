@@ -116,6 +116,9 @@ func serve(logOut io.Writer) error {
 	}
 	themeHandler := themes.New(theme, db, logger)
 
+	// Pushes scheduled announcements to players when they go out.
+	go playerAPI.RunScheduler(ctx, 15*time.Second)
+
 	srv := &http.Server{
 		Addr: cfg.Addr,
 		Handler: server.New(server.Options{

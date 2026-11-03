@@ -1,11 +1,14 @@
 package api_test
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/flagfall/flagfall/internal/store"
 )
@@ -191,3 +194,46 @@ func TestAuditLogRedactsSecrets(t *testing.T) {
 func jsonUnmarshal(b []byte, v any) error { return json.Unmarshal(b, v) }
 
 func sprintf(format string, args ...any) string { return fmt.Sprintf(format, args...) }
+
+// subscribe opens the live stream and sends each event block (lines up to a
+// blank line) on the channel. It skips the stream's opening comments.
+func (e *env) subscribe() (<-chan string, func()) {
+	e.t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	req, _ := http.NewRequestWithContext(ctx, "GET", e.server.URL+"/api/v1/live", nil)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		cancel()
+		e.t.Fatal(err)
+	}
+	out := make(chan string, 16)
+	ready := make(chan struct{})
+	go func() {
+		defer res.Body.Close()
+		sc := bufio.NewScanner(res.Body)
+		var block strings.Builder
+		once := false
+		for sc.Scan() {
+			line := sc.Text()
+			if !once {
+				once = true
+				close(ready)
+			}
+			if line != "" {
+				block.WriteString(line + "\n")
+				continue
+			}
+			if s := block.String(); strings.Contains(s, "event:") {
+				out <- s
+			}
+			block.Reset()
+		}
+	}()
+	select {
+	case <-ready:
+	case <-time.After(3 * time.Second):
+		cancel()
+		e.t.Fatal("live stream didn't start")
+	}
+	return out, cancel
+}
