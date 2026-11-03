@@ -15,6 +15,9 @@ export function createLive(url: string, ES: typeof EventSource | undefined): Liv
   let source: EventSource | null = null;
   let status: LiveStatus = "closed";
   let closed = false;
+  // Set as soon as an open is scheduled, so several on() calls in a row
+  // share one connection (browsers allow only ~6 per host over HTTP/1.1).
+  let pending = false;
 
   const setStatus = (s: LiveStatus) => {
     if (s === status) return;
@@ -38,13 +41,15 @@ export function createLive(url: string, ES: typeof EventSource | undefined): Liv
   };
 
   const open = () => {
-    if (source || closed) return;
+    if (source || pending || closed) return;
     const Ctor = ES ?? (typeof EventSource !== "undefined" ? EventSource : undefined);
     if (!Ctor) return;
-    setStatus("connecting");
     // Jitter, so a thousand tabs don't all reconnect in the same instant.
     const delay = status === "reconnecting" ? Math.random() * 2000 : 0;
+    pending = true;
+    setStatus("connecting");
     setTimeout(() => {
+      pending = false;
       if (closed) return;
       source = new Ctor(url, { withCredentials: true });
       source.onopen = () => setStatus("open");

@@ -80,3 +80,30 @@ describe("format", () => {
     expect(formatDuration(-5)).toBe("00:00:00");
   });
 });
+
+describe("live", () => {
+  it("opens one connection no matter how many handlers subscribe", async () => {
+    vi.useFakeTimers();
+    const opened: string[] = [];
+    class FakeES {
+      readyState = 0;
+      onopen: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      constructor(url: string) {
+        opened.push(url);
+      }
+      addEventListener() {}
+      close() {}
+    }
+    const ff = createClient({ EventSource: FakeES as unknown as typeof EventSource });
+    for (const type of ["scoreboard", "solve", "announcement", "challenge-updated", "event-state", "resync"] as const) {
+      ff.live.on(type, () => {});
+    }
+    await vi.runAllTimersAsync();
+    ff.live.on("scoreboard", () => {});
+    await vi.runAllTimersAsync();
+    expect(opened).toEqual(["/api/v1/live"]);
+    ff.live.close();
+    vi.useRealTimers();
+  });
+});
