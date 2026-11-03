@@ -61,6 +61,8 @@
     for (const s of t.settings) {
       const stored = base?.values[s.key];
       v[s.key] = stored ?? s.default ?? (s.type === "boolean" ? false : "");
+      // Uppercase colors, so the accent swatches match saved values.
+      if (s.type === "color" && typeof v[s.key] === "string") v[s.key] = String(v[s.key]).toUpperCase();
     }
     values = v;
     customCss = base?.customCss ?? "";
@@ -269,10 +271,81 @@
     load(false);
     return () => channel?.close();
   });
+
+  // ------------------------------------------------ design/option-a/admin/appearance.html
+
+  // Extra accent swatches offered next to the theme's own default.
+  const PRESETS = ["#FF7A45", "#7EE2A8", "#8FD3FF"];
+  let showCss = $state(false);
+
+  /** A theme's saved values over its defaults: draft, else published. */
+  function savedValues(t: InstalledTheme): Record<string, SettingValue> {
+    const base = t.draft ?? t.published;
+    const out: Record<string, SettingValue> = {};
+    for (const s of t.settings) out[s.key] = base?.values[s.key] ?? s.default ?? "";
+    return out;
+  }
+
+  const isAccent = (s: ThemeSetting) => s.type === "color" && (s.key === "accent" || /accent|amber/.test(s.cssVar ?? ""));
+  const isBackground = (s: ThemeSetting) => s.type === "color" && (s.key === "background" || s.cssVar === "--bg");
+
+  /** The colors for a theme's thumbnail and the live preview. */
+  function palette(t: InstalledTheme, v: Record<string, SettingValue>) {
+    const color = (pick: (s: ThemeSetting) => boolean, fallback: string) => {
+      const s = t.settings.find(pick);
+      const c = s ? String(v[s.key] ?? s.default ?? "") : "";
+      return /^#[0-9a-fA-F]{6}$/.test(c) ? c : fallback;
+    };
+    const bg = color(isBackground, "#0D1321");
+    const accent = color(isAccent, "#FFB000");
+    // Light text on dark backgrounds, unless the theme sets a text color.
+    const dark = (contrastRatio(bg, "#000000") ?? 21) < 10;
+    const text = color((s) => s.type === "color" && (s.key === "text" || s.cssVar === "--text"), dark ? "#E6E9EF" : "#1A1D23");
+    return { bg, accent, text, panel: `color-mix(in srgb, ${bg} 88%, ${text})` };
+  }
+
+  const accentSetting = $derived(selected?.settings.find(isAccent) ?? null);
+  const bgSetting = $derived(selected?.settings.find(isBackground) ?? null);
+  const swatches = $derived.by(() => {
+    const d = accentSetting && typeof accentSetting.default === "string" ? accentSetting.default.toUpperCase() : "";
+    return [d, ...PRESETS].filter((c, i, all) => c && all.indexOf(c) === i);
+  });
+  const livePalette = $derived(selected ? palette(selected, values) : null);
+  const buttonContrast = $derived(livePalette ? contrastRatio(livePalette.accent, livePalette.bg) : null);
+  const otherSettings = $derived(groups.map((g) => ({ ...g, settings: g.settings.filter((s) => s !== accentSetting) })).filter((g) => g.settings.length));
+
+  function badges(t: InstalledTheme): { text: string; kind: string }[] {
+    const out: { text: string; kind: string }[] = [];
+    if (t.live) out.push({ text: "Published", kind: "fill" });
+    if (t.previewing) out.push({ text: "Previewing", kind: "warn" });
+    if (t.scheduled) out.push({ text: "Scheduled", kind: "warn" });
+    if (t.draft) out.push({ text: "Draft", kind: "" });
+    if (!t.built) out.push({ text: "Not built", kind: "bad" });
+    if (t.adminStyle) out.push({ text: "Styles the admin", kind: "" });
+    return out;
+  }
+
+  function statusLine(t: InstalledTheme): string {
+    if (t.scheduled) return `Scheduled to go live ${when(t.scheduled.publishAt)}.`;
+    if (t.live && t.draft) return "Published, with unpublished changes.";
+    if (t.live) return "Published.";
+    if (t.draft) return "Draft. Players don't see it until you publish.";
+    return "Not published.";
+  }
 </script>
 
-<h1>Appearance</h1>
-<p class="muted">Pick the theme players see, customize it, preview your changes, then publish. Every published version is kept, so you can roll back.</p>
+
+<div class="page-head">
+  <div>
+    <h1>Appearance</h1>
+    <p class="muted">Pick a theme, adjust it, preview it with the live event, then publish. Players switch the moment you publish.</p>
+  </div>
+  <div class="adm-actions">
+    <!-- Theme upload waits for a later release (decision D-10). -->
+    <button type="button" class="btn-line" disabled title="Theme upload comes in a later release. Bundled themes are listed below.">Upload theme (.zip)</button>
+    <button type="button" class="btn-line" aria-expanded={showCss} aria-controls="custom-css" onclick={() => (showCss = !showCss)} disabled={!selected}>Custom CSS</button>
+  </div>
+</div>
 {#if error}<p class="notice bad">{error}</p>{/if}
 {#if data?.fallback}
   <p class="notice bad">The published theme can't be served (it isn't installed or isn't built), so players see the default theme. Publish a theme to fix this.</p>
@@ -280,58 +353,119 @@
 {#each data?.warnings ?? [] as w (w)}<p class="notice bad">{w}</p>{/each}
 
 {#if data}
-  <div class="themes" role="group" aria-label="Installed themes">
-    {#each data.themes as t (t.id)}
-      <button type="button" class="theme" class:selected={t.id === selectedId} aria-pressed={t.id === selectedId} onclick={() => (selectedId = t.id)}>
-        {#if t.screenshots[0]}<img src={t.screenshots[0].url} alt={t.screenshots[0].alt} />{/if}
-        <b>{t.name}</b>
-        <span class="muted small">v{t.version} · {t.source === "bundled" ? "bundled" : "uploaded"}</span>
-        <span class="desc">{t.description}</span>
-        <span class="badges">{#each status(t) as s}<span class="badge" class:ok={s === "live"} class:warn={s === "previewing" || s === "scheduled"} class:bad={s === "not built"}>{s}</span>{/each}</span>
-      </button>
-    {/each}
-  </div>
-{/if}
+  <div class="row">
+    <section class="grow-main" aria-labelledby="installed">
+      <h2 id="installed">Installed themes <small class="muted">{data.themes.length}</small></h2>
+      <div class="theme-grid">
+        {#each data.themes as t (t.id)}
+          {@const pal = palette(t, t.id === selectedId ? values : savedValues(t))}
+          <button type="button" class="theme-card" class:on={t.id === selectedId} aria-pressed={t.id === selectedId} onclick={() => (selectedId = t.id)}>
+            {#if t.screenshots[0]}
+              <img class="mini" src={t.screenshots[0].url} alt="" />
+            {:else}
+              <span class="mini" aria-hidden="true" style="background: {pal.bg}">
+                <span class="mini-top"><span style="background: {pal.accent}"></span><span style="background: {pal.text}"></span></span>
+                <span class="mini-grid">
+                  <span style="background: {pal.panel}; border: 1px solid {pal.accent}"></span>
+                  {#each [1, 2, 3, 4] as i (i)}<span style="background: {pal.panel}"></span>{/each}
+                  <span style="background: {pal.accent}"></span>
+                </span>
+              </span>
+            {/if}
+            <span class="theme-name"><b>{t.name}</b><span class="mono muted small">v{t.version}</span></span>
+            <span class="badges">
+              {#each badges(t) as b (b.text)}<span class="badge" class:fill={b.kind === "fill"} class:warn={b.kind === "warn"} class:bad={b.kind === "bad"}>{b.text}</span>{/each}
+            </span>
+          </button>
+        {/each}
+      </div>
+    </section>
 
-{#if selected}
-  <form class="card" onsubmit={save} oninput={changed}>
-    <div class="head">
-      <h2>{selected.name}</h2>
-      <span class="spacer"></span>
-      {#if selected.previewing}
-        <button type="button" onclick={stopPreview}>Stop preview</button>
-      {/if}
-      <button type="button" onclick={preview} disabled={busy || !selected.built}>{selected.previewing ? "Open preview" : "Preview"}</button>
-    </div>
-    {#if !selected.built}<p class="notice bad">This theme isn't built, so it can't be previewed or published.</p>{/if}
-    {#if selected.scheduled}
-      <p class="notice">Scheduled to go live {when(selected.scheduled.publishAt)}. <button type="button" class="small" onclick={cancelSchedule}>Cancel</button></p>
-    {/if}
-    {#if selected.draft}<p class="hint">You're editing an unpublished draft (version {selected.draft.version}).{#if !selected.live} Publishing switches players to this theme.{/if}</p>{/if}
-    {#if selected.settings.length === 0}<p class="muted">This theme has no settings.</p>{/if}
+    {#if selected && livePalette}
+      <form class="panel pad side-panel stack" onsubmit={save} oninput={changed} aria-labelledby="custom"
+        style="--pbg: {livePalette.bg}; --ppanel: {livePalette.panel}; --ptext: {livePalette.text}; --acc: {livePalette.accent}">
+        <div>
+          <h2 id="custom">{selected.name}</h2>
+          <p class="muted small">{statusLine(selected)} {selected.description}</p>
+        </div>
+        {#if !selected.built}<p class="notice bad">This theme isn't built, so it can't be previewed or published.</p>{/if}
+        {#if selected.scheduled}
+          <p class="notice">Goes live {when(selected.scheduled.publishAt)}. <button type="button" class="small" onclick={cancelSchedule}>Cancel</button></p>
+        {/if}
 
-    {#each groups as g (g.name)}
-      <fieldset>
-        <legend>{g.name}</legend>
-        <div class="grid">
+        <div class="pv" aria-label="Live preview">
+          <div class="pv-top">
+            <span class="wordmark pv-text">{#each String(values.wordmark ?? "flag{fall}").split(/([{}])/).filter(Boolean) as part, i (i)}{#if part === "{" || part === "}"}<b class="pv-acc">{part}</b>{:else}{part}{/if}{/each}</span>
+            <span class="pv-text small">Live preview</span>
+          </div>
+          <div class="pv-grid">
+            <div class="pv-tile hl">Cookie Jar<b class="pv-acc">100</b></div>
+            <div class="pv-tile">Baby RSA<b>150</b></div>
+            <div class="pv-tile">Crackme v3<b>250</b></div>
+          </div>
+          <span class="pv-btn">Submit flag</span>
+        </div>
+
+        {#if accentSetting}
+          {@const err = errors[`settings.${accentSetting.key}`] || contrastWarning(accentSetting)}
+          <fieldset class="swatches">
+            <legend>{accentSetting.label}</legend>
+            <div class="sw-row">
+              {#each swatches as c, i (c)}
+                <input type="radio" name="accent" id={`sw${i}`} value={c} bind:group={values[accentSetting.key]} />
+                <label for={`sw${i}`} style="background: {c}"><span class="sr-only">Accent {c}{i === 0 ? " (theme default)" : ""}</span></label>
+              {/each}
+              <span class="custom-color" title="Any color">
+                <input type="color" aria-label="Custom accent color" bind:value={values[accentSetting.key]} />
+              </span>
+            </div>
+            {#if buttonContrast !== null && bgSetting}
+              <span class="small" class:red={buttonContrast < 4.5} class:ok-text={buttonContrast >= 4.5}>
+                Button text on this accent: {(Math.floor(buttonContrast * 10) / 10).toFixed(1)}:1 ({buttonContrast >= 4.5 ? "passes" : "too low"})
+              </span>
+            {/if}
+            {#if err}<span class="field-error">{err}</span>{/if}
+          </fieldset>
+        {/if}
+
+        {#each otherSettings as g (g.name)}
+          {#if otherSettings.length > 1}<h3 class="small muted group">{g.name}</h3>{/if}
           {#each g.settings as s (s.key)}
             {@const err = errors[`settings.${s.key}`] || contrastWarning(s)}
             {#if s.type === "boolean"}
-              <label class="check"><input type="checkbox" bind:checked={values[s.key]} /><span>{s.label}</span></label>
+              <label class="toggle-row"><span class="label">{s.label}{#if s.help}<span class="muted small">{s.help}</span>{/if}</span>
+                <input type="checkbox" bind:checked={values[s.key]} /></label>
             {:else if s.type === "image"}
-              <div class="setting">
-                <span class="lbl" id={`img-${s.key}`}>{s.label}</span>
-                <div class="image">
-                  {#if values[s.key]}<img src={values[s.key]} alt={`Current ${s.label.toLowerCase()}`} />{:else}<span class="none muted">None</span>{/if}
-                  <input type="file" aria-labelledby={`img-${s.key}`} accept={(s.accept ?? ["image/png", "image/svg+xml", "image/webp", "image/jpeg"]).join(",")} onchange={(ev) => uploadImage(s, ev)} />
-                  {#if values[s.key]}<button type="button" class="small" onclick={() => { values[s.key] = ""; changed(); }}>Remove</button>{/if}
+              <div class="field">
+                <span class="label" id={`img-${s.key}`}>{s.label}</span>
+                <div class="dash-box small">
+                  {#if values[s.key]}
+                    <img src={values[s.key]} alt={`Current ${s.label.toLowerCase()}`} />
+                    <button type="button" class="small" onclick={() => { values[s.key] = ""; changed(); }}>Remove</button>
+                  {:else}
+                    <span class="muted">{s.key === "logo" && values.wordmark ? `Using the ${values.wordmark} wordmark` : "None"}</span>
+                  {/if}
+                  <label class="link">{values[s.key] ? "Replace" : "Upload"}
+                    <input class="sr-only" type="file" aria-labelledby={`img-${s.key}`} accept={(s.accept ?? ["image/png", "image/svg+xml", "image/webp", "image/jpeg"]).join(",")} onchange={(ev) => uploadImage(s, ev)} />
+                  </label>
                 </div>
-                {#if s.help}<span class="hint">{s.help}</span>{/if}
+                {#if s.help}<small>{s.help}</small>{/if}
                 {#if err}<span class="field-error">{err}</span>{/if}
               </div>
+            {:else if (s.type === "select" || s.type === "font") && options(s).length <= 4}
+              <fieldset class="seg">
+                <legend>{s.label}</legend>
+                <div class="choice">
+                  {#each options(s) as o (o.value)}
+                    <input type="radio" name={`seg-${s.key}`} id={`seg-${s.key}-${o.value}`} value={o.value} bind:group={values[s.key]} />
+                    <label for={`seg-${s.key}-${o.value}`}>{o.label}</label>
+                  {/each}
+                </div>
+                {#if s.help}<small class="muted">{s.help}</small>{/if}
+              </fieldset>
             {:else}
-              <label class:wide={s.multiline}>
-                <span>{s.label}</span>
+              <label class="field">
+                <span class="label">{s.label}</span>
                 {#if s.type === "color"}
                   <span class="color">
                     <input type="color" aria-label={`${s.label} picker`} bind:value={values[s.key]} />
@@ -348,79 +482,118 @@
                 {:else}
                   <input maxlength={s.maxLength} bind:value={values[s.key]} />
                 {/if}
-                {#if s.help}<span class="hint">{s.help}</span>{/if}
+                {#if s.help}<small>{s.help}</small>{/if}
                 {#if err}<span class="field-error">{err}</span>{/if}
               </label>
             {/if}
           {/each}
-        </div>
-      </fieldset>
-    {/each}
-
-    <fieldset>
-      <legend>Custom CSS</legend>
-      <label class="wide">
-        <span>Small overrides added after the theme's own styles. Only files from this server can be loaded.</span>
-        <textarea rows="6" bind:value={customCss} spellcheck="false" placeholder=".board h1 {'{'} letter-spacing: 0.05em; {'}'}"></textarea>
-        {#if errors.customCss}<span class="field-error">{errors.customCss}</span>{/if}
-      </label>
-    </fieldset>
-
-    <div class="actions">
-      <button class="primary" type="button" onclick={publish} disabled={busy || !selected.built}>{selected.live ? "Publish changes" : "Publish this theme"}</button>
-      <button disabled={busy}>Save draft</button>
-      {#if selected.draft}<button type="button" class="danger" onclick={discardDraft}>Discard draft</button>{/if}
-      <span class="spacer"></span>
-      <label class="inline"><span class="sr-only">Publish at</span><input type="datetime-local" bind:value={scheduleAt} min={toLocalInput(new Date().toISOString())} /></label>
-      <button type="button" onclick={schedule} disabled={!scheduleAt || !selected.built}>Schedule</button>
-    </div>
-    {#if dirty}<p class="hint">Unsaved changes.</p>{/if}
-  </form>
-
-  <h2>History</h2>
-  {#if history.length === 0}
-    <p class="empty">Nothing saved for this theme yet.</p>
-  {:else}
-    <table>
-      <thead><tr><th class="num">Version</th><th>Status</th><th>Published</th><th>By</th><th></th></tr></thead>
-      <tbody>
-        {#each history as v (v.version)}
-          <tr>
-            <td class="num">{v.version}</td>
-            <td><span class="badge" class:ok={v.status === "live"} class:warn={v.status === "scheduled" || v.status === "draft"}>{v.status}</span></td>
-            <td>{v.status === "scheduled" ? `at ${when(v.publishAt)}` : when(v.publishedAt)}</td>
-            <td>{v.publishedBy ?? "—"}</td>
-            <td>{#if v.status === "archived" && selected.built}<button class="small" onclick={() => restore(v)}>Restore</button>{/if}</td>
-          </tr>
         {/each}
-      </tbody>
-    </table>
-  {/if}
+
+        {#if showCss || customCss}
+          <label class="field" id="custom-css">
+            <span class="label">Custom CSS</span>
+            <textarea rows="6" bind:value={customCss} spellcheck="false" placeholder=".board h1 {'{'} letter-spacing: 0.05em; {'}'}"></textarea>
+            <small>Small overrides added after the theme's own styles. Only files from this server can be loaded.</small>
+            {#if errors.customCss}<span class="field-error">{errors.customCss}</span>{/if}
+          </label>
+        {/if}
+
+        <div class="btn-row">
+          <button type="button" class="grow" onclick={preview} disabled={busy || !selected.built}>{selected.previewing ? "Open preview" : "Preview as player"}</button>
+          <button type="button" class="primary grow" onclick={publish} disabled={busy || !selected.built}>{selected.live ? "Publish changes" : "Publish this theme"}</button>
+        </div>
+        <div class="btn-row small-row">
+          <button class="small" disabled={busy}>Save draft</button>
+          {#if selected.draft}<button type="button" class="small danger" onclick={discardDraft}>Discard draft</button>{/if}
+          {#if selected.previewing}<button type="button" class="small" onclick={stopPreview}>Stop preview</button>{/if}
+          <span class="grow"></span>
+          <span class="sched">
+            <input class="when" type="datetime-local" aria-label="Publish at" bind:value={scheduleAt} min={toLocalInput(new Date().toISOString())} />
+            <button type="button" class="small" onclick={schedule} disabled={!scheduleAt || !selected.built}>Schedule</button>
+          </span>
+        </div>
+        {#if dirty}<p class="hint">Unsaved changes.</p>{/if}
+
+        <div>
+          <h3 class="small muted">Publish history</h3>
+          {#if history.length === 0}
+            <p class="small muted">Nothing saved for this theme yet.</p>
+          {:else}
+            <ol class="history small">
+              {#each history as v (v.version)}
+                <li>
+                  <b>Version {v.version} {v.status === "live" ? "published" : v.status}</b>
+                  {#if v.status === "scheduled"}for {when(v.publishAt)}{:else if v.publishedAt}{v.publishedBy ? ` by ${v.publishedBy}` : ""}, {when(v.publishedAt)}{/if}
+                  {#if v.status === "archived" && selected.built}<button type="button" class="link-btn" onclick={() => restore(v)}>Restore</button>{/if}
+                </li>
+              {/each}
+            </ol>
+          {/if}
+        </div>
+      </form>
+    {/if}
+  </div>
 {/if}
 
 <style>
-  .themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
-  .theme { display: flex; flex-direction: column; gap: 0.25rem; text-align: left; padding: 0.85rem 1rem; background: var(--panel); }
-  .theme.selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-  .theme img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); margin-bottom: 0.25rem; }
-  .theme .desc { color: var(--muted); font-size: 0.85rem; font-weight: 400; }
-  .small { font-size: 0.8rem; }
-  .badges { display: flex; gap: 0.25rem; flex-wrap: wrap; margin-top: 0.25rem; }
-  .head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
-  .head h2 { margin: 0; }
-  .spacer { flex: 1; }
-  fieldset { border: 1px solid var(--line); border-radius: var(--radius); padding: 0.75rem 1rem 0.25rem; margin: 0 0 1rem; }
-  legend { color: var(--muted); font-size: 0.85rem; padding: 0 0.35rem; }
-  .wide { grid-column: 1 / -1; }
-  .color { display: flex; gap: 0.4rem; }
-  .color input[type="color"] { width: 2.6rem; padding: 0.1rem; height: auto; }
-  .image { display: flex; align-items: center; gap: 0.6rem; }
-  .image img { width: 2.75rem; height: 2.75rem; object-fit: contain; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); }
-  .image .none { width: 2.75rem; text-align: center; font-size: 0.8rem; }
-  .image input[type="file"] { width: auto; flex: 1; min-width: 0; }
-  .setting .hint, .setting .field-error { display: block; margin-top: 0.25rem; }
-  .lbl { display: block; color: var(--muted); font-size: 0.85rem; margin-bottom: 0.25rem; }
-  label .hint, label .field-error { display: block; margin-top: 0.25rem; }
-  .inline { margin: 0; }
-  .inline input { width: auto; }
+  h2 small { font-family: var(--sans); font-weight: 400; font-size: 15px; }
+  .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 12px; }
+  .theme-card { display: flex; flex-direction: column; align-items: stretch; gap: 12px; min-height: 0; padding: 12px; text-align: left; white-space: normal; font-weight: 400; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; color: var(--text); }
+  .theme-card:hover:not(:disabled) { color: var(--text); border-color: var(--accent-line); }
+  .theme-card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .mini { display: flex; flex-direction: column; gap: 6px; height: 112px; padding: 8px; border-radius: 4px; overflow: hidden; }
+  img.mini { width: 100%; object-fit: cover; padding: 0; }
+  .mini-top { display: flex; justify-content: space-between; align-items: center; }
+  .mini-top span:first-child { width: 44px; height: 6px; border-radius: 1px; }
+  .mini-top span:last-child { width: 60px; height: 4px; border-radius: 1px; opacity: 0.4; }
+  .mini-grid { flex: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+  .mini-grid span { border-radius: 2px; outline: 1px solid rgba(255, 255, 255, 0.08); }
+  .theme-name { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+
+  .pv { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--pbg); }
+  .pv-top { display: flex; justify-content: space-between; align-items: center; }
+  .pv-text { color: var(--ptext); }
+  .pv-top .small { opacity: 0.7; }
+  .pv-acc { color: var(--acc); }
+  .wordmark { font-family: "JetBrains Mono", var(--mono); font-weight: 800; letter-spacing: -0.02em; }
+  .pv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .pv-tile { display: flex; flex-direction: column; padding: 8px; background: var(--ppanel); border-radius: 3px; font-size: 12px; color: var(--ptext); outline: 1px solid rgba(255, 255, 255, 0.06); }
+  .pv-tile b { font-size: 16px; }
+  .pv-tile.hl { outline: 1px solid var(--acc); }
+  .pv-btn { align-self: flex-start; padding: 4px 12px; border-radius: 3px; background: var(--acc); color: var(--pbg); font-size: 12px; font-weight: 700; }
+
+  .swatches, .seg { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px; }
+  .swatches legend, .seg legend { padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+  .sw-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .sw-row input[type="radio"] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .sw-row label { width: 44px; height: 44px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+  .sw-row input:checked + label { border-color: var(--text); box-shadow: inset 0 0 0 3px var(--panel); }
+  .sw-row input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .custom-color input { width: 44px; height: 44px; min-height: 0; padding: 3px; border: 1px dashed var(--line-2); border-radius: 50%; background: transparent; cursor: pointer; }
+  .custom-color input::-webkit-color-swatch-wrapper { padding: 0; }
+  .custom-color input::-webkit-color-swatch { border: 0; border-radius: 50%; }
+  .custom-color input::-moz-color-swatch { border: 0; border-radius: 50%; }
+  .ok-text { color: var(--ok); }
+
+  .choice { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 6px; align-self: flex-start; }
+  .choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .choice label { padding: 6px 14px; border-radius: 4px; color: var(--text-2); cursor: pointer; font-size: 14px; }
+  .choice input:checked + label { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .choice input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .dash-box { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px dashed var(--line-2); border-radius: 4px; }
+  .dash-box img { width: 40px; height: 40px; object-fit: contain; background: var(--bg); border-radius: 4px; }
+  .dash-box .link { cursor: pointer; }
+  .color { display: flex; gap: 8px; }
+  .color input[type="color"] { width: 48px; flex: none; padding: 2px; }
+  .group { margin-top: 4px; }
+  .toggle-row .label { display: flex; flex-direction: column; }
+
+  .small-row { gap: 8px; }
+  .sched { display: flex; gap: 6px; align-items: center; }
+  .when { width: auto; min-height: 30px; padding: 2px 8px; font-size: 13px; }
+  .history { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; color: var(--muted); }
+  .history b { color: var(--text); font-weight: 500; }
+  .link-btn { min-height: 0; padding: 0 0 0 6px; border: 0; background: none; color: var(--accent); font-size: 13px; }
+  .link-btn:hover:not(:disabled) { color: var(--accent-2); border: 0; }
 </style>
