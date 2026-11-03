@@ -19,6 +19,10 @@ both sign-in pages). For a real event, start with it off and empty volumes:
 and finish setup at `/admin` with the code printed in
 `docker compose logs flagfall`.
 
+The stack also runs Mailpit, which catches every email: open
+http://localhost:8026 and, in the admin panel's Settings, use mail server
+`mailpit`, port `1025`, security "None".
+
 The image runs as a non-root user on a distroless base, keeps the secret
 key and uploads in the `/data` volume, and checks itself with
 `flagfall healthcheck`.

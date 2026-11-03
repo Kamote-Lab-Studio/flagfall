@@ -77,6 +77,20 @@ type EventSettings struct {
 	DemoAccount *DemoAccount `json:"demoAccount,omitempty"`
 	// DemoAdmin is shown on the admin sign-in page. Same rules.
 	DemoAdmin *DemoAccount `json:"demoAdmin,omitempty"`
+	// Mail is the SMTP server for account emails; nil means emails go to
+	// the server log.
+	Mail *MailSettings `json:"mail,omitempty"`
+}
+
+// MailSettings is the SMTP configuration. The password is sealed with the
+// install's secret key (internal/mail.Seal) and never sent to browsers.
+type MailSettings struct {
+	Host           string `json:"host"`
+	Port           int    `json:"port"`
+	Username       string `json:"username,omitempty"`
+	SealedPassword string `json:"sealedPassword,omitempty"`
+	From           string `json:"from"`
+	Security       string `json:"security"`
 }
 
 // DemoAccount is a public, throwaway login for demo installs.

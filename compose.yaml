@@ -47,6 +47,15 @@ services:
     volumes:
       - flagfall-pg:/var/lib/postgresql/data
 
+  # Catches every email for local testing; nothing leaves this machine.
+  # Inbox: http://localhost:8026. In Settings, use mail server "mailpit",
+  # port 1025, security "None".
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_PORT:-8026}:8025"
+
 volumes:
   flagfall-data:
   flagfall-pg:

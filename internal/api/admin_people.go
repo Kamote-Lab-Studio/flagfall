@@ -285,7 +285,7 @@ func (a *API) adminResetPassword(w http.ResponseWriter, r *http.Request) error {
 	}
 	link := a.cfg.PublicURL + "/reset-password?token=" + token
 	out := map[string]any{"emailed": false}
-	if _, logOnly := a.mailer.(LogMailer); logOnly {
+	if !a.canEmail(ctx) {
 		// No SMTP server: hand the link to the staff member to pass on.
 		out["link"] = link
 	} else {

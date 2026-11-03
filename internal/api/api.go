@@ -23,8 +23,8 @@ import (
 	"github.com/flagfall/flagfall/internal/store"
 )
 
-// Mailer sends account emails. SMTP settings arrive with the admin panel
-// (Phase 2); until then LogMailer writes messages to the server log.
+// Mailer sends account emails. By default the API uses the SMTP settings
+// saved in the admin panel, and logs emails while there are none.
 type Mailer interface {
 	Send(ctx context.Context, to, subject, body string) error
 }
@@ -74,16 +74,13 @@ func New(o Options) *API {
 	if o.Logger == nil {
 		o.Logger = slog.Default()
 	}
-	if o.Mailer == nil {
-		o.Mailer = LogMailer{Logger: o.Logger}
-	}
 	if o.Now == nil {
 		o.Now = time.Now
 	}
 	if o.Boards == nil {
 		o.Boards = scoring.NewCache(o.Store)
 	}
-	return &API{
+	a := &API{
 		store: o.Store, cfg: o.Config, hub: o.Hub, boards: o.Boards, mailer: o.Mailer, log: o.Logger, now: o.Now,
 		limitSignIn:    ratelimit.New(10, 15*time.Minute),
 		limitSignUp:    ratelimit.New(5, time.Hour),
@@ -93,6 +90,10 @@ func New(o Options) *API {
 		limitGeneral:   ratelimit.New(300, time.Minute),
 		sessionTouchAt: 5 * time.Minute,
 	}
+	if a.mailer == nil {
+		a.mailer = settingsMailer{a}
+	}
+	return a
 }
 
 // Boards exposes the scoreboard cache, so admin code can invalidate it.

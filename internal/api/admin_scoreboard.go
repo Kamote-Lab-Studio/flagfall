@@ -350,8 +350,8 @@ func (a *API) adminDashboard(w http.ResponseWriter, r *http.Request) error {
 	if ev.StartsAt == nil || ev.EndsAt == nil {
 		warnings = append(warnings, "The event has no start or end time set.")
 	}
-	if _, logOnly := a.mailer.(LogMailer); logOnly {
-		warnings = append(warnings, "No SMTP server is set up, so password reset emails go to the server log.")
+	if !a.canEmail(ctx) {
+		warnings = append(warnings, "No mail server is set up (Settings), so password reset emails go to the server log.")
 	}
 	if warnings == nil {
 		warnings = []string{}

@@ -63,6 +63,13 @@ type env struct {
 
 func newEnv(t *testing.T) *env {
 	t.Helper()
+	return makeEnv(t, true)
+}
+
+// makeEnv with box false uses the real mailer (the SMTP settings saved in
+// the database) instead of the in-memory mailbox.
+func makeEnv(t *testing.T, box bool) *env {
+	t.Helper()
 	s := storetest.New(t)
 	ctx := context.Background()
 	if err := s.EnsureEvent(ctx); err != nil {
@@ -85,8 +92,12 @@ func newEnv(t *testing.T) *env {
 	}
 
 	mail := &mailbox{}
+	var mailer api.Mailer
+	if box {
+		mailer = mail
+	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	a := api.New(api.Options{Store: s, Config: cfg, Hub: live.NewHub(), Mailer: mail, Logger: logger, Now: clk.Now})
+	a := api.New(api.Options{Store: s, Config: cfg, Hub: live.NewHub(), Mailer: mailer, Logger: logger, Now: clk.Now})
 	h := server.New(server.Options{Logger: logger, Mount: []func(chi.Router){a.Mount, a.MountAdmin}})
 	ts := httptest.NewServer(h)
 	t.Cleanup(ts.Close)
