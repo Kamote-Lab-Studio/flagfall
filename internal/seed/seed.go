@@ -1,9 +1,10 @@
-// Package seed loads the sample event: the 12 sample challenges and the
-// teams, players and solves shown in the Option A designs.
+// Package seed loads the sample event: the 12 sample challenges and ten
+// teams and their players from the Option A designs.
 //
 // data/teams.json was extracted from design/option-a/teams.html and
-// team/*.html. Solve times are stored relative to "now", so the sample always
-// looks like an event in progress with about 14 hours left.
+// team/*.html, then cut down to ten teams (including the demo player's
+// null_pointer) with no solves, so every team starts at 0 points. The loader
+// still reads "solves" (times relative to "now") if any are added back.
 package seed
 
 import (

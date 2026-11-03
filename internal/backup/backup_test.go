@@ -106,6 +106,9 @@ func top(t *testing.T, s *store.Store) string {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(snap.Full.Entries) == 0 {
+		return "(nobody has scored)"
+	}
 	e := snap.Full.Entries[0]
 	return fmt.Sprintf("%s %d", e.Team.Name, e.Score)
 }
@@ -114,7 +117,7 @@ func TestRoundTripIntoAnotherDatabase(t *testing.T) {
 	src, srcFiles, key := source(t)
 	zr, m := write(t, src, srcFiles)
 	// 13 sample downloads + the handout + the logo.
-	if m.Rows["teams"] != 312 || m.Rows["users"] != 829 || m.Files != 15 || m.Rows["theme_images"] != 1 || len(m.MissingFiles) != 0 {
+	if m.Rows["teams"] != 10 || m.Rows["users"] != 33 || m.Files != 15 || m.Rows["theme_images"] != 1 || len(m.MissingFiles) != 0 {
 		t.Fatalf("manifest = %+v", m)
 	}
 

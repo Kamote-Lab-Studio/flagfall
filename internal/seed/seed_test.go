@@ -24,7 +24,9 @@ func TestSampleMatchesTheDesigns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum != (seed.Summary{Challenges: 12, Teams: 312, Players: 828, Solves: 704}) {
+	// Ten teams from design/option-a/teams.html, including the demo player's
+	// null_pointer, all starting at 0 points.
+	if sum != (seed.Summary{Challenges: 12, Teams: 10, Players: 32, Solves: 0}) {
 		t.Fatalf("summary = %+v", sum)
 	}
 
@@ -32,17 +34,9 @@ func TestSampleMatchesTheDesigns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Ranks and points printed on design/option-a/teams.html, except that the
-	// demo player's team, null_pointer, starts with no solves.
-	want := []struct {
-		name  string
-		score int
-	}{{"kernel_panic", 2750}, {"0xdeadbeef", 2350}, {"bitflip", 1900}, {"r00tbeer", 750}}
-	for i, w := range want {
-		e := snap.Public.Entries[i]
-		if e.Team.Name != w.name || e.Score != w.score {
-			t.Errorf("rank %d = %s %d, want %s %d", i+1, e.Team.Name, e.Score, w.name, w.score)
-		}
+	// The scoreboard lists teams with a non-zero score, so it starts empty.
+	if len(snap.Public.Entries) != 0 {
+		t.Errorf("scoreboard starts with %d teams, want none", len(snap.Public.Entries))
 	}
 
 	ev, _ := s.LoadEvent(ctx)

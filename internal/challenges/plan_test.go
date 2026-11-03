@@ -163,6 +163,23 @@ func TestPruneRetiresSolvedChallenges(t *testing.T) {
 	if _, err := seed.Sample(ctx, db, secret, files, time.Now()); err != nil {
 		t.Fatal(err)
 	}
+	// The sample starts with no solves; give one team a solve so prune has
+	// something to retire.
+	var team store.Team
+	var chal store.Challenge
+	if err := db.DB.NewSelect().Model(&team).Limit(1).Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.DB.NewSelect().Model(&chal).Where("slug = ?", "baby-rsa").Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+	sub := &store.Submission{TeamID: team.ID, ChallengeID: chal.ID, Correct: true, Submitted: "(test)", SubmittedAt: time.Now()}
+	if _, err := db.DB.NewInsert().Model(sub).Exec(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.DB.NewInsert().Model(&store.Solve{TeamID: team.ID, ChallengeID: chal.ID, SubmissionID: sub.ID, SolvedAt: time.Now()}).Exec(ctx); err != nil {
+		t.Fatal(err)
+	}
 	specs, err := challenges.Load(pack("fresh"), ".")
 	if err != nil {
 		t.Fatal(err)

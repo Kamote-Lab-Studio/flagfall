@@ -42,7 +42,7 @@ Usage:
 
 Commands:
   serve        Start the server
-  seed sample  Load the sample event (12 challenges, 312 teams) into an empty install
+  seed sample  Load the sample event (12 challenges, 10 teams) into an empty install
   backup <file>   Write a backup (database and uploaded files) to a .zip; "-" for stdout
   restore <file>  Restore a backup into an empty install (--replace to overwrite one; stop the server first)
   challenges check|import|export <folder>

@@ -99,8 +99,10 @@ func TestSetupWithSample(t *testing.T) {
 	if ev.str("name") != "Olive CTF" || ev.body["demoAccount"] != nil {
 		t.Fatalf("a wizard install must keep its own name and not advertise the demo login: %s", ev.raw)
 	}
-	if b := c.must(200, "GET", "/api/v1/scoreboard", nil); len(b.body["entries"].([]any)) == 0 || b.body["entries"].([]any)[0].(map[string]any)["team"].(map[string]any)["name"] != "kernel_panic" {
-		t.Fatal("sample teams missing")
+	// The sample's ten teams start at 0 points, so they're on the teams list
+	// but not yet on the scoreboard.
+	if b := c.must(200, "GET", "/api/v1/teams", nil); b.body["total"] != 10.0 {
+		t.Fatalf("sample teams missing: %s", b.raw)
 	}
 }
 
