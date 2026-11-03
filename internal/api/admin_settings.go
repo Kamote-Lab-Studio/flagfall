@@ -18,6 +18,7 @@ func (a *API) mountAdminSettings(r chi.Router) {
 	r.Get("/settings", a.h(a.staff("owner", a.adminGetSettings)))
 	r.Patch("/settings", a.h(a.staff("owner", a.adminPatchSettings)))
 	r.Post("/settings/test-email", a.h(a.staff("owner", a.adminTestEmail)))
+	r.Post("/settings/test-discord", a.h(a.staff("owner", a.adminTestDiscord)))
 }
 
 // settingsMailer sends with the SMTP settings saved in the database, read
@@ -79,6 +80,7 @@ type settingsView struct {
 	SMTPFrom        string  `json:"smtpFrom"`
 	SMTPSecurity    string  `json:"smtpSecurity"`
 	SMTPProblem     *string `json:"smtpProblem"`
+	DiscordSet      bool    `json:"discordWebhookSet"`
 	Storage         struct {
 		Kind string `json:"kind"`
 		Path string `json:"path"`
@@ -97,6 +99,7 @@ func (a *API) settingsView(ev *store.Event) settingsView {
 			}
 		}
 	}
+	v.DiscordSet = ev.ParsedSettings().DiscordWebhook != ""
 	v.Storage.Kind = "local"
 	if abs, err := filepath.Abs(FilesDir(a.cfg.DataDir)); err == nil {
 		v.Storage.Path = abs
@@ -117,7 +120,7 @@ func (a *API) adminGetSettings(w http.ResponseWriter, r *http.Request) error {
 // email off. smtpPassword: absent keeps it, "" or null clears it.
 func (a *API) adminPatchSettings(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	p, err := decodePatch(r, "smtpHost", "smtpPort", "smtpUser", "smtpPassword", "smtpFrom", "smtpSecurity")
+	p, err := decodePatch(r, "smtpHost", "smtpPort", "smtpUser", "smtpPassword", "smtpFrom", "smtpSecurity", "discordWebhook")
 	if err != nil {
 		return err
 	}
@@ -151,6 +154,18 @@ func (a *API) adminPatchSettings(w http.ResponseWriter, r *http.Request) error {
 		ms.SealedPassword = ""
 		if v != "" {
 			if ms.SealedPassword, err = mail.Seal(a.cfg.Secret(), v); err != nil {
+				return err
+			}
+		}
+	}
+	if p.isNull("discordWebhook") {
+		settings.DiscordWebhook = ""
+	} else if v, ok := p.str("discordWebhook", 0, 500); ok {
+		settings.DiscordWebhook = ""
+		if v != "" {
+			if !validDiscordWebhook(v) {
+				p.fail("discordWebhook", "Paste a Discord webhook URL (https://discord.com/api/webhooks/…). In Discord: channel settings → Integrations → Webhooks.")
+			} else if settings.DiscordWebhook, err = mail.Seal(a.cfg.Secret(), v); err != nil {
 				return err
 			}
 		}
@@ -202,5 +217,22 @@ func (a *API) adminTestEmail(w http.ResponseWriter, r *http.Request) error {
 		return &apiError{Status: http.StatusBadGateway, Code: "mail_failed", Message: "The test email wasn't sent: " + msg}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"sentTo": u.Email})
+	return nil
+}
+
+// adminTestDiscord posts a test message to the saved webhook.
+func (a *API) adminTestDiscord(w http.ResponseWriter, r *http.Request) error {
+	webhook := a.discordWebhook(r.Context())
+	if webhook == "" {
+		return errValidation(map[string]string{"discordWebhook": "Save a Discord webhook first."})
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"content":          "✅ Flagfall is connected. Announcements will appear in this channel.",
+		"allowed_mentions": map[string]any{"parse": []string{}},
+	})
+	if err := a.postDiscord(r.Context(), webhook, payload); err != nil {
+		return &apiError{Status: http.StatusBadGateway, Code: "discord_failed", Message: "The test message wasn't posted: " + err.Error()}
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"posted": true})
 	return nil
 }

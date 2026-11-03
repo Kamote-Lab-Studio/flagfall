@@ -98,7 +98,7 @@ func (a *API) adminCreateAnnouncement(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 	if !an.PostedAt.After(now) {
-		a.publish("announcement", AnnouncementView(an))
+		a.publishAnnouncement(ctx, an)
 	}
 	writeJSON(w, http.StatusCreated, a.adminAnnouncement(an))
 	return nil
@@ -129,7 +129,7 @@ func (a *API) adminPatchAnnouncement(w http.ResponseWriter, r *http.Request) err
 	// Edits to a posted announcement aren't pushed again (no repeat toast);
 	// players see them on their next load. Moving the time to now posts it.
 	if !wasPosted && !an.PostedAt.After(a.now()) {
-		a.publish("announcement", AnnouncementView(an))
+		a.publishAnnouncement(ctx, an)
 	}
 	writeJSON(w, http.StatusOK, a.adminAnnouncement(an))
 	return nil
@@ -176,7 +176,7 @@ func (a *API) publishDue(ctx context.Context, since time.Time) time.Time {
 		return since
 	}
 	for i := range due {
-		a.publish("announcement", AnnouncementView(&due[i]))
+		a.publishAnnouncement(ctx, &due[i])
 	}
 	return now
 }

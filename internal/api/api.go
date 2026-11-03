@@ -44,8 +44,10 @@ type API struct {
 	hub    *live.Hub
 	boards *scoring.Cache
 	mailer Mailer
-	log    *slog.Logger
-	now    func() time.Time
+	// httpClient makes outgoing calls (Discord webhooks).
+	httpClient *http.Client
+	log        *slog.Logger
+	now        func() time.Time
 
 	limitSignIn    *ratelimit.Limiter
 	limitSignUp    *ratelimit.Limiter
@@ -64,7 +66,9 @@ type Options struct {
 	Hub    *live.Hub
 	Boards *scoring.Cache
 	Mailer Mailer
-	Logger *slog.Logger
+	// HTTPClient makes outgoing calls; tests swap its transport.
+	HTTPClient *http.Client
+	Logger     *slog.Logger
 	// Now overrides the clock, for tests.
 	Now func() time.Time
 }
@@ -89,6 +93,9 @@ func New(o Options) *API {
 		limitFlags:     ratelimit.New(10, time.Minute),
 		limitGeneral:   ratelimit.New(300, time.Minute),
 		sessionTouchAt: 5 * time.Minute,
+	}
+	if a.httpClient = o.HTTPClient; a.httpClient == nil {
+		a.httpClient = &http.Client{Timeout: 15 * time.Second}
 	}
 	if a.mailer == nil {
 		a.mailer = settingsMailer{a}

@@ -7,7 +7,7 @@
 
   interface Settings {
     smtpHost: string; smtpPort: number; smtpUser: string; smtpPasswordSet: boolean; smtpFrom: string;
-    smtpSecurity: string; smtpProblem: string | null; storage: { kind: string; path: string };
+    smtpSecurity: string; smtpProblem: string | null; discordWebhookSet: boolean; storage: { kind: string; path: string };
   }
 
   let s = $state<Settings | null>(null);
@@ -16,6 +16,37 @@
   let errors = $state<Record<string, string>>({});
   let busy = $state(false);
   let testing = $state(false);
+
+  let hook = $state("");
+  let hookErrors = $state<Record<string, string>>({});
+  let hookBusy = $state(false);
+
+  async function saveHook(webhook: string) {
+    hookBusy = true;
+    hookErrors = {};
+    try {
+      s = await api.patch<Settings>("/settings", { discordWebhook: webhook });
+      hook = "";
+      notify(webhook ? "Discord webhook saved." : "Discord posting turned off.");
+    } catch (err) {
+      hookErrors = fieldErrors(err);
+      notify(message(err), "error");
+    } finally {
+      hookBusy = false;
+    }
+  }
+
+  async function testHook() {
+    hookBusy = true;
+    try {
+      await api.post("/settings/test-discord");
+      notify("Test message posted to Discord.");
+    } catch (err) {
+      notify(message(err), "error");
+    } finally {
+      hookBusy = false;
+    }
+  }
 
   let staff = $state<User[]>([]);
   let search = $state("");
@@ -129,6 +160,26 @@
     <div class="actions">
       <button class="primary" disabled={busy}>Save</button>
       <button type="button" onclick={sendTest} disabled={testing || !s.smtpHost}>{testing ? "Sending…" : `Send a test email to ${session.me?.email}`}</button>
+    </div>
+  </form>
+
+  <h2>Discord</h2>
+  <form class="card" onsubmit={(e) => { e.preventDefault(); saveHook(hook); }}>
+    <p class="muted">
+      Announcements are also posted to a Discord channel when they go out. In Discord: channel settings → Integrations →
+      Webhooks → New Webhook → Copy Webhook URL.
+    </p>
+    {#if s.discordWebhookSet}
+      <p><span class="badge ok">connected</span> <span class="muted">The URL is saved (hidden). Paste a new one to replace it.</span></p>
+    {/if}
+    <label><span>Webhook URL</span><input class="mono" bind:value={hook} placeholder="https://discord.com/api/webhooks/…" autocomplete="off" />
+      {#if hookErrors.discordWebhook}<div class="field-error">{hookErrors.discordWebhook}</div>{/if}</label>
+    <div class="actions">
+      <button class="primary" disabled={hookBusy || !hook}>Save webhook</button>
+      {#if s.discordWebhookSet}
+        <button type="button" onclick={testHook} disabled={hookBusy}>Post a test message</button>
+        <button type="button" class="danger" onclick={() => saveHook("")} disabled={hookBusy}>Turn off</button>
+      {/if}
     </div>
   </form>
 

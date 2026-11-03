@@ -50,12 +50,52 @@ func (m *mailbox) Send(_ context.Context, to, subject, body string) error {
 	return nil
 }
 
+// hooks records outgoing HTTP calls (Discord webhooks) instead of sending them.
+type hooks struct {
+	mu     sync.Mutex
+	calls  []hookCall
+	status int
+	got    chan struct{}
+}
+
+type hookCall struct{ URL, Body string }
+
+func (h *hooks) RoundTrip(r *http.Request) (*http.Response, error) {
+	b, _ := io.ReadAll(r.Body)
+	h.mu.Lock()
+	h.calls = append(h.calls, hookCall{r.URL.String(), string(b)})
+	status := h.status
+	h.mu.Unlock()
+	select {
+	case h.got <- struct{}{}:
+	default:
+	}
+	if status == 0 {
+		status = http.StatusNoContent
+	}
+	return &http.Response{StatusCode: status, Body: io.NopCloser(strings.NewReader(`{"message": "Unknown Webhook"}`)), Header: http.Header{}, Request: r}, nil
+}
+
+// wait returns the next call, or fails after 3 seconds.
+func (h *hooks) wait(t *testing.T) hookCall {
+	t.Helper()
+	select {
+	case <-h.got:
+	case <-time.After(3 * time.Second):
+		t.Fatal("no webhook call")
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.calls[len(h.calls)-1]
+}
+
 type env struct {
 	t      *testing.T
 	store  *store.Store
 	cfg    config.Config
 	clock  *clock
 	mail   *mailbox
+	hooks  *hooks
 	server *httptest.Server
 	start  time.Time
 	api    *api.API
@@ -96,12 +136,13 @@ func makeEnv(t *testing.T, box bool) *env {
 	if box {
 		mailer = mail
 	}
+	hk := &hooks{got: make(chan struct{}, 16)}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	a := api.New(api.Options{Store: s, Config: cfg, Hub: live.NewHub(), Mailer: mailer, Logger: logger, Now: clk.Now})
+	a := api.New(api.Options{Store: s, Config: cfg, Hub: live.NewHub(), Mailer: mailer, HTTPClient: &http.Client{Transport: hk}, Logger: logger, Now: clk.Now})
 	h := server.New(server.Options{Logger: logger, Mount: []func(chi.Router){a.Mount, a.MountAdmin}})
 	ts := httptest.NewServer(h)
 	t.Cleanup(ts.Close)
-	return &env{t: t, store: s, cfg: cfg, clock: clk, mail: mail, server: ts, start: start, api: a}
+	return &env{t: t, store: s, cfg: cfg, clock: clk, mail: mail, hooks: hk, server: ts, start: start, api: a}
 }
 
 type client struct {

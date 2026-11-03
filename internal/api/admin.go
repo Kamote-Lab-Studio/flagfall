@@ -140,7 +140,7 @@ func (a *API) requireSetupDone(next http.Handler) http.Handler {
 // ---------------------------------------------------------------- audit
 
 // Keys whose values never reach the audit log.
-var redactKeys = map[string]bool{"password": true, "current": true, "next": true, "flag": true, "smtppassword": true, "secretkey": true, "setupcode": true}
+var redactKeys = map[string]bool{"password": true, "current": true, "next": true, "flag": true, "smtppassword": true, "secretkey": true, "setupcode": true, "discordwebhook": true}
 
 // audit writes one audit_log row for every successful write.
 func (a *API) audit(next http.Handler) http.Handler {

@@ -77,6 +77,9 @@ type EventSettings struct {
 	DemoAccount *DemoAccount `json:"demoAccount,omitempty"`
 	// DemoAdmin is shown on the admin sign-in page. Same rules.
 	DemoAdmin *DemoAccount `json:"demoAdmin,omitempty"`
+	// DiscordWebhook is the sealed (internal/mail.Seal) webhook URL that
+	// announcements are posted to; empty means none.
+	DiscordWebhook string `json:"discordWebhook,omitempty"`
 	// Mail is the SMTP server for account emails; nil means emails go to
 	// the server log.
 	Mail *MailSettings `json:"mail,omitempty"`
