@@ -26,6 +26,11 @@
     error = "";
     try {
       await ff.auth.signIn({ email, password });
+      const admin = destination();
+      if (admin) {
+        location.assign(admin); // a different app, so a full page load
+        return;
+      }
       await refreshMe();
       navigate(next(), { replace: true });
     } catch (err) {
@@ -35,13 +40,30 @@
     }
   }
 
-  const demo = $derived(app.event?.demoAccount ?? null);
+  // Demo installs offer two public logins: a team captain for the player
+  // site, and the owner for the admin panel. Picking one fills the form.
+  type DemoKind = "player" | "organizer";
+  const demos = $derived(
+    [
+      { kind: "player" as DemoKind, title: "Player", what: "Team captain of a sample team. Solve challenges, see the scoreboard.", login: app.event?.demoAccount ?? null },
+      { kind: "organizer" as DemoKind, title: "Organizer", what: "Owner account. Opens the admin panel to manage the event.", login: app.event?.demoAdmin ?? null },
+    ].filter((d) => d.login),
+  );
+  let picked = $state<DemoKind | null>(null);
 
-  function useDemo() {
-    if (!demo) return;
-    email = demo.email;
-    password = demo.password;
+  function useDemo(kind: DemoKind) {
+    const d = demos.find((x) => x.kind === kind);
+    if (!d?.login) return;
+    picked = kind;
+    email = d.login.email;
+    password = d.login.password;
     error = "";
+  }
+
+  // Where to go after signing in: the admin panel for the demo organizer.
+  function destination(): string | null {
+    const admin = app.event?.demoAdmin;
+    return admin && email.trim().toLowerCase() === admin.email.toLowerCase() ? "/admin" : null;
   }
 
   async function reset(ev: SubmitEvent) {
@@ -96,15 +118,22 @@ connected to {app.event?.name ?? "flagfall"}
         </div>
         {#if error}<p class="status-msg bad" role="alert">{error}</p>{/if}
         <button class="btn" type="submit" disabled={busy}>Sign in</button>
-        {#if demo}
+        {#if demos.length}
           <section class="demo" aria-labelledby="demo-title">
-            <h2 id="demo-title">Demo account</h2>
-            <p>This is a demo install. Sign in as a team captain to try it:</p>
-            <dl>
-              <dt>Email</dt><dd><code>{demo.email}</code></dd>
-              <dt>Password</dt><dd><code>{demo.password}</code></dd>
-            </dl>
-            <button type="button" class="btn-ghost" onclick={useDemo}>Fill in the demo account</button>
+            <h2 id="demo-title">Try the demo</h2>
+            <p>This is a demo install. Pick an account to fill in the form, then sign in:</p>
+            <div class="demo-choices" role="radiogroup" aria-labelledby="demo-title">
+              {#each demos as d (d.kind)}
+                <button type="button" class="demo-choice" role="radio" aria-checked={picked === d.kind} onclick={() => useDemo(d.kind)}>
+                  <b>{d.title}</b>
+                  <span>{d.what}</span>
+                  <dl>
+                    <dt>Email</dt><dd><code>{d.login?.email}</code></dd>
+                    <dt>Password</dt><dd><code>{d.login?.password}</code></dd>
+                  </dl>
+                </button>
+              {/each}
+            </div>
           </section>
         {/if}
         <div class="form-foot">

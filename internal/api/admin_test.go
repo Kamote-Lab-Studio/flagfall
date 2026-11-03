@@ -253,8 +253,9 @@ func TestSetupOffersDemoOwnerOnlyOnDemoInstalls(t *testing.T) {
 	if r.str("demoAccount", "email") != "organizer@sample.invalid" {
 		t.Fatalf("setup = %s", r.raw)
 	}
-	// The player API doesn't advertise the owner login.
-	if ev := anon.must(200, "GET", "/api/v1/event", nil); strings.Contains(string(ev.raw), "organizer") {
-		t.Fatalf("player event leaks the demo owner: %s", ev.raw)
+	// The player sign-in page offers it too, so a demo visitor can pick
+	// either login. It's already public on the admin sign-in page.
+	if ev := anon.must(200, "GET", "/api/v1/event", nil); ev.str("demoAdmin", "email") != "organizer@sample.invalid" {
+		t.Fatalf("event = %s", ev.raw)
 	}
 }

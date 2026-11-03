@@ -1,7 +1,7 @@
 <script lang="ts">
   import { formatDuration } from "@flagfall/theme-sdk";
-  import { app, serverNow, t } from "../lib/state.svelte";
-  import { route } from "../lib/router.svelte";
+  import { app, ff, serverNow, t } from "../lib/state.svelte";
+  import { navigate, route } from "../lib/router.svelte";
   import { fmt, initials } from "../lib/util";
   import Logo from "./Logo.svelte";
   import Icon from "./Icon.svelte";
@@ -30,6 +30,18 @@
     return null;
   });
   const team = $derived(app.me?.team ?? null);
+
+  let signingOut = $state(false);
+  async function signOut() {
+    signingOut = true;
+    try {
+      await ff.auth.signOut();
+      app.me = null;
+      navigate("/sign-in");
+    } finally {
+      signingOut = false;
+    }
+  }
 </script>
 
 <header class="top">
@@ -57,6 +69,7 @@
           <small>{team ? (team.rank ? t("header.rank", { rank: team.rank, points: fmt(team.score) }) : `${fmt(team.score)} pts`) : t("header.noTeam")}</small>
         </span>
       </a>
+      <button type="button" class="btn-ghost sign-out" onclick={signOut} disabled={signingOut}>{t("header.signOut")}</button>
     {:else}
       <a class="btn" href="/sign-in">{t("header.signIn")}</a>
     {/if}

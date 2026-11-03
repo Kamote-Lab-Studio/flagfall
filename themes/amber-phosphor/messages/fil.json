@@ -8,6 +8,7 @@
   "header.startsIn": "magsisimula sa {time}",
   "header.over": "Tapos na ang event",
   "header.signIn": "Mag-sign in",
+  "header.signOut": "Mag-sign out",
   "header.rank": "Ranggo {rank}, {points} pts",
   "header.noTeam": "Wala pang team",
   "board.title": "Mga Hamon",

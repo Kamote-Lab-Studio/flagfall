@@ -624,8 +624,9 @@ func TestUnknownAPIRouteIsJSON404(t *testing.T) {
 func TestEventHasNoDemoAccountByDefault(t *testing.T) {
 	e := newEnv(t)
 	ev := e.client().must(200, "GET", "/api/v1/event", nil)
-	v, ok := ev.body["demoAccount"]
-	if !ok || v != nil {
-		t.Fatalf("demoAccount should be present and null on a normal install: %s", ev.raw)
+	for _, key := range []string{"demoAccount", "demoAdmin"} {
+		if v, ok := ev.body[key]; !ok || v != nil {
+			t.Fatalf("%s should be present and null on a normal install: %s", key, ev.raw)
+		}
 	}
 }

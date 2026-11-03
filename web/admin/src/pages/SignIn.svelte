@@ -41,6 +41,7 @@
         <dt>Password</dt><dd class="mono">{demo.password}</dd>
       </dl>
       <button type="button" onclick={fillDemo}>Fill in the demo account</button>
+      <p class="switch">Want to play instead? <a href="/sign-in">Sign in as the demo player</a> on the event site.</p>
     </section>
   {/if}
 
@@ -69,6 +70,7 @@
   .demo { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
   .demo h2 { margin: 0 0 0.4rem; font-size: 0.95rem; }
   .demo p { color: var(--muted); font-size: 0.9rem; }
+  .demo .switch { margin: 0.75rem 0 0; }
   dl { display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.75rem; margin: 0 0 0.75rem; }
   dt { color: var(--muted); font-size: 0.85rem; }
   dd { margin: 0; overflow-wrap: anywhere; }

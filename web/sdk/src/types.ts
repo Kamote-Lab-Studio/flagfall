@@ -38,8 +38,10 @@ export interface Event {
   brackets: Bracket[];
   /** Category names in display order, for filters. */
   categories: string[];
-  /** A public login to show on the sign-in page. Null except on demo installs. */
+  /** Public demo logins, only on installs loaded with `flagfall seed sample`. */
   demoAccount: { email: string; password: string } | null;
+  /** The demo owner, for the admin panel at /admin. */
+  demoAdmin: { email: string; password: string } | null;
 }
 
 // ---------------------------------------------------------------- Accounts and teams

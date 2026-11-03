@@ -8,6 +8,7 @@
   "header.startsIn": "starts in {time}",
   "header.over": "Event over",
   "header.signIn": "Sign in",
+  "header.signOut": "Sign out",
   "header.rank": "Rank {rank}, {points} pts",
   "header.noTeam": "No team yet",
   "board.title": "Challenges",
