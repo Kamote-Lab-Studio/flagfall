@@ -99,7 +99,7 @@ export interface Flagfall {
   scoreboard: {
     get(query?: { bracketId?: ID }): Promise<Scoreboard>;
     /** Score-over-time lines for the top N teams (default 10, max 25). */
-    series(query?: { bracketId?: ID; top?: number }): Promise<ScoreSeries[]>;
+    series(query?: { bracketId?: ID; top?: number; teamId?: ID }): Promise<ScoreSeries[]>;
   };
 
   announcements: {

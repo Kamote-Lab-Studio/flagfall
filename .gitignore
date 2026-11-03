@@ -27,3 +27,8 @@ Thumbs.db
 # Local config with secrets
 flagfall.toml
 .env
+
+# Keep the placeholder so Go embeds compile before themes are built
+!themes/*/dist/
+themes/*/dist/*
+!themes/*/dist/.keep

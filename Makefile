@@ -7,14 +7,17 @@ LDFLAGS := -s -w \
 	-X github.com/flagfall/flagfall/internal/version.Version=$(VERSION) \
 	-X github.com/flagfall/flagfall/internal/version.Commit=$(COMMIT)
 
-.PHONY: dev build test lint web-install web-build web-lint clean
+.PHONY: dev build build-go test lint web-install web-build web-lint clean
 
 ## dev: run the server locally on :8080
 dev:
 	go run ./cmd/flagfall serve
 
-## build: build bin/flagfall
-build:
+## build: build the theme and admin front ends, then bin/flagfall with them embedded
+build: web-build build-go
+
+## build-go: build bin/flagfall only (pages show a build reminder if the theme was never built)
+build-go:
 	go build -trimpath -ldflags "$(LDFLAGS)" -o bin/flagfall ./cmd/flagfall
 
 ## test: run Go and frontend tests

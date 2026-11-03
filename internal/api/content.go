@@ -131,9 +131,19 @@ func (a *API) getSeries(w http.ResponseWriter, r *http.Request) error {
 	if top > 25 {
 		top = 25
 	}
-	entries := board.Bracket(bracketParam(r))
+	all := board.Bracket(bracketParam(r))
+	entries := all
 	if len(entries) > top {
-		entries = entries[:top]
+		entries = entries[:top:top]
+		// ?teamId= adds one more ranked team, e.g. the viewer's own.
+		if extra, err := strconv.ParseInt(r.URL.Query().Get("teamId"), 10, 64); err == nil {
+			for _, e := range all[top:] {
+				if e.Team.ID == extra {
+					entries = append(entries, e)
+					break
+				}
+			}
+		}
 	}
 	ids := make([]int64, len(entries))
 	for i, e := range entries {

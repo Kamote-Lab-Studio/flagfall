@@ -21,7 +21,9 @@ import (
 	"github.com/flagfall/flagfall/internal/seed"
 	"github.com/flagfall/flagfall/internal/server"
 	"github.com/flagfall/flagfall/internal/store"
+	"github.com/flagfall/flagfall/internal/themes"
 	"github.com/flagfall/flagfall/internal/version"
+	amberphosphor "github.com/flagfall/flagfall/themes/amber-phosphor"
 )
 
 const usage = `Flagfall: a self-hosted CTF platform.
@@ -96,12 +98,24 @@ func serve(logOut io.Writer) error {
 	defer hub.Close()
 	playerAPI := api.New(api.Options{Store: db, Config: cfg, Hub: hub, Logger: logger})
 
+	theme, err := themes.Load(amberphosphor.FS)
+	if err != nil {
+		return fmt.Errorf("load the default theme: %w", err)
+	}
+	if err := theme.Register(ctx, db, time.Now()); err != nil {
+		return fmt.Errorf("register the default theme: %w", err)
+	}
+	if !theme.Built() {
+		logger.Warn("the player theme isn't built; pages show a build reminder (run make web-build, then rebuild)")
+	}
+	themeHandler := themes.New(theme, db, logger)
+
 	srv := &http.Server{
 		Addr: cfg.Addr,
 		Handler: server.New(server.Options{
 			Logger:     logger,
 			TrustProxy: cfg.TrustProxy,
-			Mount:      []func(chi.Router){playerAPI.Mount},
+			Mount:      []func(chi.Router){playerAPI.Mount, themeHandler.Mount},
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

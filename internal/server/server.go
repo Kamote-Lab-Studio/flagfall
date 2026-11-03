@@ -45,6 +45,7 @@ func New(opts Options) http.Handler {
 	}
 	r.Use(requestLogger(opts.Logger))
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.GetHead) // HEAD works wherever GET does (uptime checks, curl -I)
 	r.Use(securityHeaders)
 
 	r.Get("/healthz", healthz)
