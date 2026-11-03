@@ -16,6 +16,12 @@ import (
 // Options configures the server.
 type Options struct {
 	Logger *slog.Logger
+	// TrustProxy uses X-Forwarded-For / X-Real-IP for the client address.
+	// Only enable behind a reverse proxy that sets them; otherwise players
+	// could fake their IP to dodge rate limits.
+	TrustProxy bool
+	// Mount adds feature routes (player API, files, theme, admin).
+	Mount []func(chi.Router)
 }
 
 // New returns the root HTTP handler.
@@ -34,12 +40,17 @@ func New(opts Options) http.Handler {
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	if opts.TrustProxy {
+		r.Use(middleware.RealIP)
+	}
 	r.Use(requestLogger(opts.Logger))
 	r.Use(middleware.Recoverer)
 	r.Use(securityHeaders)
 
 	r.Get("/healthz", healthz)
+	for _, mount := range opts.Mount {
+		mount(r)
+	}
 
 	return r
 }

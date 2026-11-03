@@ -31,6 +31,9 @@ type Config struct {
 	DatabaseURL string `toml:"database_url"`
 	// SecretKey signs sessions and hashes flags. Hex, at least 32 bytes.
 	SecretKey string `toml:"secret_key"`
+	// TrustProxy reads the client IP from X-Forwarded-For. Only set this
+	// behind a reverse proxy (Caddy, nginx, a load balancer).
+	TrustProxy bool `toml:"trust_proxy"`
 
 	// secret is the decoded SecretKey, set by EnsureSecret.
 	secret []byte
@@ -65,6 +68,9 @@ func Load(lookup LookupFunc) (Config, error) {
 	env("FLAGFALL_DATA_DIR", &cfg.DataDir)
 	env("FLAGFALL_DATABASE_URL", &cfg.DatabaseURL)
 	env("FLAGFALL_SECRET_KEY", &cfg.SecretKey)
+	if v, ok := lookup("FLAGFALL_TRUST_PROXY"); ok && v != "" {
+		cfg.TrustProxy = v == "true" || v == "1"
+	}
 
 	def := func(dst *string, v string) {
 		if *dst == "" {

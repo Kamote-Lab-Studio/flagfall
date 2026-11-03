@@ -13,8 +13,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
+	"github.com/flagfall/flagfall/internal/api"
 	"github.com/flagfall/flagfall/internal/config"
+	"github.com/flagfall/flagfall/internal/live"
 	"github.com/flagfall/flagfall/internal/server"
+	"github.com/flagfall/flagfall/internal/store"
 	"github.com/flagfall/flagfall/internal/version"
 )
 
@@ -70,15 +75,38 @@ func serve(logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
-
-	srv := &http.Server{
-		Addr:              cfg.Addr,
-		Handler:           server.New(server.Options{Logger: logger}),
-		ReadHeaderTimeout: 10 * time.Second,
+	if err := cfg.EnsureSecret(); err != nil {
+		return err
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	db, err := store.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	if err := db.Migrate(ctx); err != nil {
+		return err
+	}
+	if err := db.EnsureEvent(ctx); err != nil {
+		return err
+	}
+
+	hub := live.NewHub()
+	defer hub.Close()
+	playerAPI := api.New(api.Options{Store: db, Config: cfg, Hub: hub, Logger: logger})
+
+	srv := &http.Server{
+		Addr: cfg.Addr,
+		Handler: server.New(server.Options{
+			Logger:     logger,
+			TrustProxy: cfg.TrustProxy,
+			Mount:      []func(chi.Router){playerAPI.Mount},
+		}),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -94,6 +122,7 @@ func serve(logOut io.Writer) error {
 		return err
 	case <-ctx.Done():
 		logger.Info("shutting down")
+		hub.Close() // end live streams so Shutdown doesn't wait on them
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
