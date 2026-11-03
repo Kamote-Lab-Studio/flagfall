@@ -54,6 +54,7 @@ type API struct {
 	limitFlags     *ratelimit.Limiter
 	limitGeneral   *ratelimit.Limiter
 	sessionTouchAt time.Duration
+	setup          setupState
 }
 
 // Options configures New.

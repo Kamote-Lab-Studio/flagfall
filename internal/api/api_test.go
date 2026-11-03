@@ -58,6 +58,7 @@ type env struct {
 	mail   *mailbox
 	server *httptest.Server
 	start  time.Time
+	api    *api.API
 }
 
 func newEnv(t *testing.T) *env {
@@ -86,10 +87,10 @@ func newEnv(t *testing.T) *env {
 	mail := &mailbox{}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	a := api.New(api.Options{Store: s, Config: cfg, Hub: live.NewHub(), Mailer: mail, Logger: logger, Now: clk.Now})
-	h := server.New(server.Options{Logger: logger, Mount: []func(chi.Router){a.Mount}})
+	h := server.New(server.Options{Logger: logger, Mount: []func(chi.Router){a.Mount, a.MountAdmin}})
 	ts := httptest.NewServer(h)
 	t.Cleanup(ts.Close)
-	return &env{t: t, store: s, cfg: cfg, clock: clk, mail: mail, server: ts, start: start}
+	return &env{t: t, store: s, cfg: cfg, clock: clk, mail: mail, server: ts, start: start, api: a}
 }
 
 type client struct {

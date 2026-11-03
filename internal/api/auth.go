@@ -55,47 +55,9 @@ func (a *API) signUp(w http.ResponseWriter, r *http.Request) error {
 		return errRateLimited(wait)
 	}
 
-	in.Name = strings.TrimSpace(in.Name)
-	in.Email = strings.TrimSpace(in.Email)
-	fields := map[string]string{}
-	if msg := validName(in.Name); msg != "" {
-		fields["name"] = msg
-	}
-	if addr, err := mail.ParseAddress(in.Email); err != nil || addr.Address != in.Email || len(in.Email) > 254 {
-		fields["email"] = "Enter a valid email address."
-	}
-	if msg := auth.ValidatePassword(in.Password); msg != "" {
-		fields["password"] = msg
-	}
-	country, ok := normalizeCountry(in.Country)
-	if !ok {
-		fields["country"] = "Use a two-letter country code."
-	}
-	if fields["name"] == "" {
-		if n, _ := a.store.DB.NewSelect().Model((*store.User)(nil)).Where("name_key = ?", nameKey(in.Name)).Count(ctx); n > 0 {
-			fields["name"] = "That name is taken."
-		}
-	}
-	if fields["email"] == "" {
-		if n, _ := a.store.DB.NewSelect().Model((*store.User)(nil)).Where("email_key = ?", strings.ToLower(in.Email)).Count(ctx); n > 0 {
-			fields["email"] = "An account with this email already exists. Sign in instead."
-		}
-	}
-	if len(fields) > 0 {
-		return errValidation(fields)
-	}
-
-	hash, err := auth.HashPassword(in.Password)
+	user, err := a.newAccount(ctx, a.store.DB, in.Name, in.Email, in.Password, in.Country, "player")
 	if err != nil {
 		return err
-	}
-	user := &store.User{
-		Name: in.Name, NameKey: nameKey(in.Name), Email: in.Email, EmailKey: strings.ToLower(in.Email),
-		PasswordHash: hash, Role: "player", Country: strp(country), CreatedAt: a.now().UTC(),
-	}
-	if _, err := a.store.DB.NewInsert().Model(user).Exec(ctx); err != nil {
-		// Lost a race with another sign-up for the same name or email.
-		return errValidation(map[string]string{"name": "That name or email is taken."})
 	}
 	if err := a.startSession(ctx, w, r, user); err != nil {
 		return err
@@ -329,4 +291,51 @@ func (a *API) confirmPasswordReset(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 	return noContent(w)
+}
+
+// newAccount validates and inserts a user with the given role. It returns a
+// validation error listing every problem at once.
+func (a *API) newAccount(ctx context.Context, db bun.IDB, name, email, password, countryIn, role string) (*store.User, error) {
+	name = strings.TrimSpace(name)
+	email = strings.TrimSpace(email)
+	fields := map[string]string{}
+	if msg := validName(name); msg != "" {
+		fields["name"] = msg
+	}
+	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email || len(email) > 254 {
+		fields["email"] = "Enter a valid email address."
+	}
+	if msg := auth.ValidatePassword(password); msg != "" {
+		fields["password"] = msg
+	}
+	country, ok := normalizeCountry(countryIn)
+	if !ok {
+		fields["country"] = "Use a two-letter country code."
+	}
+	if fields["name"] == "" {
+		if n, _ := db.NewSelect().Model((*store.User)(nil)).Where("name_key = ?", nameKey(name)).Count(ctx); n > 0 {
+			fields["name"] = "That name is taken."
+		}
+	}
+	if fields["email"] == "" {
+		if n, _ := db.NewSelect().Model((*store.User)(nil)).Where("email_key = ?", strings.ToLower(email)).Count(ctx); n > 0 {
+			fields["email"] = "An account with this email already exists. Sign in instead."
+		}
+	}
+	if len(fields) > 0 {
+		return nil, errValidation(fields)
+	}
+	hash, err := auth.HashPassword(password)
+	if err != nil {
+		return nil, err
+	}
+	user := &store.User{
+		Name: name, NameKey: nameKey(name), Email: email, EmailKey: strings.ToLower(email),
+		PasswordHash: hash, Role: role, Country: strp(country), CreatedAt: a.now().UTC(),
+	}
+	if _, err := db.NewInsert().Model(user).Exec(ctx); err != nil {
+		// Lost a race with another sign-up for the same name or email.
+		return nil, errValidation(map[string]string{"name": "That name or email is taken."})
+	}
+	return user, nil
 }

@@ -97,6 +97,12 @@ func serve(logOut io.Writer) error {
 	hub := live.NewHub()
 	defer hub.Close()
 	playerAPI := api.New(api.Options{Store: db, Config: cfg, Hub: hub, Logger: logger})
+	if code, required, err := playerAPI.PrepareSetup(ctx); err != nil {
+		return fmt.Errorf("check for an owner account: %w", err)
+	} else if required {
+		logger.Warn("no owner account yet: open the admin panel to finish setup",
+			"url", cfg.PublicURL+"/admin", "setup_code", code)
+	}
 
 	theme, err := themes.Load(amberphosphor.FS)
 	if err != nil {
@@ -115,7 +121,7 @@ func serve(logOut io.Writer) error {
 		Handler: server.New(server.Options{
 			Logger:     logger,
 			TrustProxy: cfg.TrustProxy,
-			Mount:      []func(chi.Router){playerAPI.Mount, themeHandler.Mount},
+			Mount:      []func(chi.Router){playerAPI.Mount, playerAPI.MountAdmin, themeHandler.Mount},
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
