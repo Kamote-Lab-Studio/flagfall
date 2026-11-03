@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -36,6 +38,7 @@ Usage:
 Commands:
   serve        Start the server
   seed sample  Load the sample event (12 challenges, 312 teams) into an empty install
+  healthcheck  Exit 0 if the server on FLAGFALL_ADDR answers /healthz (for containers)
   version      Print the version and exit
   help         Show this help
 
@@ -44,7 +47,36 @@ Configuration comes from environment variables or flagfall.toml (see docs/dev/co
   FLAGFALL_PUBLIC_URL  public URL players use (default "http://localhost:8080")
   FLAGFALL_DATA_DIR    data directory (default "./data")
   FLAGFALL_DATABASE_URL  database URL (default: SQLite in the data directory)
+  FLAGFALL_SEED_SAMPLE   "true" loads the sample event and demo logins on the first serve (demos only)
 `
+
+func truthy(v string) bool { return v == "1" || strings.EqualFold(v, "true") }
+
+// healthcheck asks the local server for /healthz. Container images have no
+// curl, so the binary checks itself.
+func healthcheck() error {
+	addr := os.Getenv("FLAGFALL_ADDR")
+	if addr == "" {
+		addr = ":8080"
+	}
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return fmt.Errorf("FLAGFALL_ADDR %q: %w", addr, err)
+	}
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		host = "127.0.0.1"
+	}
+	client := &http.Client{Timeout: 3 * time.Second}
+	res, err := client.Get("http://" + net.JoinHostPort(host, port) + "/healthz")
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("/healthz answered %d", res.StatusCode)
+	}
+	return nil
+}
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
@@ -72,6 +104,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		return 0
+	case "healthcheck":
+		if err := healthcheck(); err != nil {
+			fmt.Fprintln(stderr, "unhealthy:", err)
+			return 1
+		}
+		return 0
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, version.String())
 		return 0
@@ -95,6 +133,16 @@ func serve(logOut io.Writer) error {
 		return err
 	}
 	defer db.Close()
+
+	// Demo containers load the sample on first start; later starts find it
+	// already there and skip.
+	if truthy(os.Getenv("FLAGFALL_SEED_SAMPLE")) {
+		if err := loadSample(ctx, cfg, db, logOut); errors.Is(err, seed.ErrNotEmpty) {
+			logger.Info("FLAGFALL_SEED_SAMPLE is set, but the install isn't empty; not loading the sample")
+		} else if err != nil {
+			return fmt.Errorf("load the sample event: %w", err)
+		}
+	}
 
 	hub := live.NewHub()
 	defer hub.Close()
@@ -187,6 +235,12 @@ func seedSample(out io.Writer) error {
 		return err
 	}
 	defer db.Close()
+	return loadSample(ctx, cfg, db, out)
+}
+
+// loadSample loads the sample event and its demo logins. It returns
+// seed.ErrNotEmpty if the install already has challenges or teams.
+func loadSample(ctx context.Context, cfg config.Config, db *store.Store, out io.Writer) error {
 	sum, err := seed.Sample(ctx, db, cfg.Secret(), api.FilesDir(cfg.DataDir), time.Now())
 	if err != nil {
 		return err

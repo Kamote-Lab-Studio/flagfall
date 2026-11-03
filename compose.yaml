@@ -1,0 +1,52 @@
+# Local Flagfall with PostgreSQL.
+#
+#   docker compose up --build -d      then open http://localhost:8090
+#
+# FLAGFALL_SEED_SAMPLE loads the sample event and its public demo logins on
+# first start. Remove it (and the volumes: docker compose down -v) for a
+# real event; /admin then asks for the setup code printed in the log.
+# For a public server with HTTPS, see deploy/ (Phase 3).
+
+name: flagfall
+
+services:
+  flagfall:
+    build:
+      context: .
+      args:
+        VERSION: ${FLAGFALL_VERSION:-0.0.0-dev}
+        COMMIT: ${FLAGFALL_COMMIT:-unknown}
+    image: flagfall:local
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLAGFALL_PUBLIC_URL: http://localhost:${FLAGFALL_PORT:-8090}
+      FLAGFALL_DATABASE_URL: postgres://flagfall:${POSTGRES_PASSWORD:-flagfall}@db:5432/flagfall?sslmode=disable
+      FLAGFALL_SEED_SAMPLE: ${FLAGFALL_SEED_SAMPLE:-true}
+    ports:
+      # Localhost only; put a TLS proxy in front for anything public.
+      - "127.0.0.1:${FLAGFALL_PORT:-8090}:8080"
+    volumes:
+      # The secret key and uploaded files.
+      - flagfall-data:/data
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flagfall
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flagfall}
+      POSTGRES_DB: flagfall
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flagfall -d flagfall"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - flagfall-pg:/var/lib/postgresql/data
+
+volumes:
+  flagfall-data:
+  flagfall-pg:
