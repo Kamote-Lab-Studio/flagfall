@@ -64,6 +64,7 @@ type API struct {
 	limitJoin      *ratelimit.Limiter
 	limitFlags     *ratelimit.Limiter
 	limitGeneral   *ratelimit.Limiter
+	limitReports   *ratelimit.Limiter
 	sessionTouchAt time.Duration
 	setup          setupState
 }
@@ -113,6 +114,7 @@ func New(o Options) *API {
 		limitJoin:      ratelimit.New(10, time.Hour),
 		limitFlags:     ratelimit.New(10, time.Minute),
 		limitGeneral:   ratelimit.New(300, time.Minute),
+		limitReports:   ratelimit.New(5, time.Minute),
 		sessionTouchAt: 5 * time.Minute,
 	}
 	if a.httpClient = o.HTTPClient; a.httpClient == nil {
@@ -144,6 +146,7 @@ func (a *API) Mount(r chi.Router) {
 
 		r.Get("/event", a.h(a.getEvent))
 		r.Get("/theme", a.h(a.getTheme))
+		r.Post("/theme/failures", a.h(a.reportThemeFailure))
 
 		r.Post("/auth/sign-up", a.h(a.signUp))
 		r.Post("/auth/sign-in", a.h(a.signIn))

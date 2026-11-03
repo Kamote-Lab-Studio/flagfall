@@ -359,6 +359,7 @@ func (a *API) adminDashboard(w http.ResponseWriter, r *http.Request) error {
 	if !a.canEmail(ctx) {
 		warnings = append(warnings, "No mail server is set up (Settings), so password reset emails go to the server log.")
 	}
+	warnings = append(warnings, a.themeFailureWarnings()...)
 	svcs, err := a.services.List(ctx)
 	if err != nil {
 		return err

@@ -136,7 +136,8 @@ func (a *API) adminListThemes(w http.ResponseWriter, r *http.Request) error {
 	if live.Theme != nil {
 		liveID = live.Theme.Manifest.ID
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"themes": out, "liveThemeId": liveID, "fallback": live.Fallback})
+	writeJSON(w, http.StatusOK, map[string]any{"themes": out, "liveThemeId": liveID, "fallback": live.Fallback,
+		"browserFailures": a.themes.Failures(), "warnings": orEmptyStrings(a.themeFailureWarnings())})
 	return nil
 }
 

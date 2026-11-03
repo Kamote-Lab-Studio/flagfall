@@ -223,6 +223,9 @@ type View struct {
 	// Fallback is true when the published theme couldn't be served and
 	// the default theme is shown instead.
 	Fallback bool
+	// BrowserFallback is true when this browser saw the published theme
+	// fail (FallbackCookie) and gets the default theme for a while.
+	BrowserFallback bool
 }
 
 // Manager decides which theme and settings each request gets.
@@ -236,6 +239,7 @@ type Manager struct {
 
 	warnMu   sync.Mutex
 	warnedAt map[string]time.Time
+	failures failureLog
 }
 
 // NewManager returns a manager for the themes in reg.
@@ -282,7 +286,11 @@ func (m *Manager) Current(r *http.Request) View {
 			}
 		}
 	}
-	return m.Live(r.Context())
+	v := m.Live(r.Context())
+	if v.Theme != nil && v.Theme.Manifest.ID != DefaultID && browserFallback(r, v) {
+		return View{Theme: m.defaultTheme(), Values: map[string]any{}, Fallback: true, BrowserFallback: true}
+	}
+	return v
 }
 
 // Draft is what an admin previewing theme id sees: its draft, else its
@@ -355,11 +363,12 @@ func New(m *Manager) *Handler { return &Handler{m: m} }
 // Mount registers the theme routes. Mount it after the API so the catch-all
 // only sees page paths.
 func (h *Handler) Mount(r chi.Router) {
+	r.Get(GuardPath, serveGuard)
 	r.Get("/theme/{id}/*", h.serveAsset)
 	r.Get("/*", h.servePage)
 }
 
-var reserved = []string{"/api/", "/files/", "/admin", "/theme/", "/theme-assets/", "/healthz"}
+var reserved = []string{"/api/", "/files/", "/admin", "/theme/", "/theme-assets/", GuardPath, "/healthz"}
 
 func (h *Handler) servePage(w http.ResponseWriter, r *http.Request) {
 	for _, p := range reserved {
@@ -381,6 +390,7 @@ func (h *Handler) servePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	page := v.Theme.index
+	page = InjectHeadStart(page, guardTag(v))
 	if style := CSSVars(v.Theme.Manifest.Settings, v.Values); style != "" {
 		page = injectHead(page, style)
 	}

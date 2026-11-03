@@ -277,6 +277,7 @@
 {#if data?.fallback}
   <p class="notice bad">The published theme can't be served (it isn't installed or isn't built), so players see the default theme. Publish a theme to fix this.</p>
 {/if}
+{#each data?.warnings ?? [] as w (w)}<p class="notice bad">{w}</p>{/each}
 
 {#if data}
   <div class="themes" role="group" aria-label="Installed themes">

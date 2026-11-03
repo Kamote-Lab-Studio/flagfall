@@ -138,6 +138,9 @@ export interface ThemeList {
   themes: InstalledTheme[];
   liveThemeId: string;
   fallback: boolean;
+  // Reports from players' browsers that a theme didn't start (last hour).
+  browserFailures: { themeId: string; version: number; reports: number; clients: number; lastReason: string; lastPath: string; lastAt: string }[];
+  warnings: string[];
 }
 
 export interface ThemeHistoryEntry {
