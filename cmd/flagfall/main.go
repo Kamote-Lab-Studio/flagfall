@@ -292,7 +292,7 @@ func serve(logOut io.Writer) error {
 		logger.Warn("the player theme isn't built; pages show a build reminder (run make web-build, then rebuild)")
 	}
 	themeHandler := themes.New(theme, db, logger)
-	adminPanel := adminui.New(adminweb.FS)
+	adminPanel := adminui.New(adminweb.FS).WithHead(themeHandler.AdminHead)
 	if !adminPanel.Built() {
 		logger.Warn("the admin panel isn't built; /admin shows a build reminder (run make web-build, then rebuild)")
 	}

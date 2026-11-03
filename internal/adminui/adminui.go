@@ -2,6 +2,7 @@
 package adminui
 
 import (
+	"context"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -15,6 +16,7 @@ import (
 type Handler struct {
 	index  []byte
 	static http.Handler
+	head   func(context.Context) string
 }
 
 // New takes the embedded build (a filesystem with dist/ at its root).
@@ -28,6 +30,14 @@ func New(files fs.FS) *Handler {
 		h.index = b
 	}
 	h.static = http.StripPrefix("/admin/", http.FileServer(http.FS(sub)))
+	return h
+}
+
+// WithHead sets a function whose markup is added to the end of the admin
+// page's <head> on every load. The server uses it to apply the active
+// theme's admin stylesheet.
+func (h *Handler) WithHead(fn func(context.Context) string) *Handler {
+	h.head = fn
 	return h
 }
 
@@ -68,9 +78,15 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Every other path is a screen of the app.
+	page := h.index
+	if h.head != nil {
+		if extra := h.head(r.Context()); extra != "" {
+			page = themes.InjectHead(page, extra)
+		}
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
-	_, _ = w.Write(h.index)
+	_, _ = w.Write(page)
 }
 
 const notBuilt = `<!doctype html>

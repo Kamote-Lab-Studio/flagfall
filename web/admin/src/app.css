@@ -1,4 +1,5 @@
-/* The admin panel's own look: neutral, dense, readable. Never themed. */
+/* The admin panel's default look: neutral, dense, readable. The active theme
+   can restyle it by overriding these tokens (see adminStyle in theme.json). */
 
 :root {
   --bg: #0f1115;

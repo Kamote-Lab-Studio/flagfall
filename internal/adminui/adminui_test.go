@@ -1,6 +1,7 @@
 package adminui_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -59,5 +60,16 @@ func TestNotBuilt(t *testing.T) {
 	rec := get(router(fstest.MapFS{"dist/.keep": {}}), "/admin")
 	if rec.Code != 503 || !strings.Contains(rec.Body.String(), "isn't built") {
 		t.Fatalf("got %d %q", rec.Code, rec.Body.String())
+	}
+}
+
+func TestHeadIsInjected(t *testing.T) {
+	r := chi.NewRouter()
+	adminui.New(fstest.MapFS{
+		"dist/index.html": {Data: []byte("<html><head><title>a</title></head><body></body></html>")},
+	}).WithHead(func(context.Context) string { return `<link rel="stylesheet" href="/theme/x/admin.css">` }).Mount(r)
+	body := get(r, "/admin/teams").Body.String()
+	if !strings.Contains(body, `<link rel="stylesheet" href="/theme/x/admin.css"></head>`) {
+		t.Fatalf("head markup missing: %q", body)
 	}
 }

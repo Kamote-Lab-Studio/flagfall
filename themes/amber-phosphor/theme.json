@@ -9,6 +9,7 @@
   "license": "Apache-2.0",
   "flagfall": ">=0.1.0 <2.0.0",
   "entry": "dist/index.html",
+  "adminStyle": "dist/admin.css",
   "pages": {
     "board": "/",
     "challenge": "/challenges/:slug",

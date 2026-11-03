@@ -6,7 +6,21 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 export default defineConfig({
   base: "/theme/amber-phosphor/",
   plugins: [svelte()],
-  build: { outDir: "dist", emptyOutDir: true, assetsInlineLimit: 0, sourcemap: false },
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
+    assetsInlineLimit: 0,
+    sourcemap: false,
+    rollupOptions: {
+      // admin.css restyles the admin panel; theme.json's adminStyle points at
+      // it, so it keeps a fixed name (served with no-cache).
+      input: { index: "index.html", admin: "src/admin.css" },
+      output: {
+        assetFileNames: (info) =>
+          info.names?.includes("admin.css") ? "admin.css" : "assets/[name]-[hash][extname]",
+      },
+    },
+  },
   server: {
     proxy: {
       "/api": { target: "http://localhost:8080", changeOrigin: false },

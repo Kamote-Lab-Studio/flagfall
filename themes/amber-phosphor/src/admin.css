@@ -1,0 +1,39 @@
+/* Amber Phosphor for the admin panel. The server links this after the admin's
+   own stylesheet while the theme is active, then adds the organizer's live
+   settings (--amber, --bg), so customized colors carry over. Only override the
+   admin's tokens and a few element styles here: the admin's layout and class
+   names are its own. */
+@import "@fontsource/chakra-petch/600.css";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+:root {
+  /* Theme settings (cssVar); the server's settings block overrides these. */
+  --amber: #FFB000;
+  --bg: #0D1321;
+
+  /* Admin tokens, mapped to the theme's palette. */
+  --panel: #151D2E;
+  --panel-2: #1B2538;
+  --line: #24304A;
+  --text: #E6E9EF;
+  --muted: #B4BDCF;
+  --accent: var(--amber);
+  --accent-ink: #0D1321;
+  --ok: #7EE0A1;
+  --warn: #FFD27A;
+  --bad: #FF9A8F;
+  --radius: 4px;
+  --display: "Chakra Petch", sans-serif;
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+h1, h2, h3 { font-family: var(--display); letter-spacing: 0.01em; }
+h1 { font-size: 1.6rem; }
+code { color: #FFD27A; }
+a:hover { color: var(--amber); }
+button.primary:hover:not(:disabled) { border-color: var(--amber); filter: brightness(1.08); }

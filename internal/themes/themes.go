@@ -37,6 +37,9 @@ type Manifest struct {
 	Settings []Setting `json:"settings"`
 	// ChallengeFields are extra per-challenge values the theme shows.
 	ChallengeFields []ChallengeField `json:"challengeFields"`
+	// AdminStyle is an optional stylesheet, inside the entry's folder, that
+	// restyles the admin panel to match the theme while it is active.
+	AdminStyle string `json:"adminStyle"`
 }
 
 // Setting is one organizer-editable value declared by a theme.
@@ -53,6 +56,7 @@ type Theme struct {
 	files    fs.FS // rooted at the theme folder (theme.json, dist/...)
 	index    []byte
 	assetDir string // folder holding the entry, e.g. "dist"
+	adminCSS string // AdminStyle relative to assetDir, when the file exists
 }
 
 // Load reads a theme package. A missing entry file is not an error: the
@@ -73,6 +77,15 @@ func Load(fsys fs.FS) (*Theme, error) {
 		return nil, fmt.Errorf("theme.json: %w", err)
 	}
 	t := &Theme{Manifest: m, files: fsys, assetDir: path.Dir(m.Entry)}
+	if m.AdminStyle != "" {
+		rel, ok := strings.CutPrefix(m.AdminStyle, t.assetDir+"/")
+		if !fs.ValidPath(m.AdminStyle) || !ok || path.Ext(rel) != ".css" {
+			return nil, errors.New("theme.json: adminStyle must be a .css file inside the entry's folder")
+		}
+		if _, err := fs.Stat(fsys, m.AdminStyle); err == nil {
+			t.adminCSS = rel
+		}
+	}
 	if b, err := fs.ReadFile(fsys, m.Entry); err == nil {
 		t.index = b
 	} else if !errors.Is(err, fs.ErrNotExist) {
@@ -178,6 +191,21 @@ func (h *Handler) serveAsset(w http.ResponseWriter, r *http.Request) {
 	h.static.ServeHTTP(w, r)
 }
 
+// AdminHead returns the tags that restyle the admin panel to match this
+// theme: a link to its admin stylesheet, then the organizer's live settings
+// as CSS variables so customized colors carry over. It returns "" when the
+// theme ships no admin stylesheet, and the admin keeps its own look.
+func (h *Handler) AdminHead(ctx context.Context) string {
+	if h.theme.adminCSS == "" || !h.theme.Built() {
+		return ""
+	}
+	out := `<link rel="stylesheet" id="flagfall-theme-admin" href="` + html.EscapeString(h.Prefix()+h.theme.adminCSS) + `">`
+	if style := h.settingsStyle(ctx); style != "" {
+		out += `<style id="flagfall-settings">` + style + "</style>"
+	}
+	return out
+}
+
 // settingsStyle turns the live settings into a :root block of CSS variables.
 func (h *Handler) settingsStyle(ctx context.Context) string {
 	values := map[string]any{}
@@ -232,7 +260,12 @@ func CSSVars(settings []Setting, values map[string]any) string {
 }
 
 func injectHead(page []byte, css string) []byte {
-	tag := []byte(`<style id="flagfall-settings">` + css + "</style>")
+	return InjectHead(page, `<style id="flagfall-settings">`+css+"</style>")
+}
+
+// InjectHead inserts markup just before </head>.
+func InjectHead(page []byte, markup string) []byte {
+	tag := []byte(markup)
 	i := bytes.Index(page, []byte("</head>"))
 	if i < 0 {
 		return append(tag, page...)

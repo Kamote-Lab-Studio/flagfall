@@ -174,3 +174,58 @@ func TestBundledThemeManifestLoads(t *testing.T) {
 		t.Fatalf("unexpected manifest: %+v", theme.Manifest)
 	}
 }
+
+func TestAdminHead(t *testing.T) {
+	withAdmin := func(adminStyle string, files fstest.MapFS) fstest.MapFS {
+		m := strings.Replace(manifest, `"entry":"dist/index.html"`, `"entry":"dist/index.html","adminStyle":"`+adminStyle+`"`, 1)
+		files["theme.json"] = &fstest.MapFile{Data: []byte(m)}
+		return files
+	}
+
+	// No adminStyle: the admin keeps its own look.
+	theme, err := themes.Load(builtFS())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := themes.New(theme, nil, nil).AdminHead(t.Context()); got != "" {
+		t.Fatalf("no adminStyle: got %q", got)
+	}
+
+	// adminStyle declared but not built yet: nothing to link.
+	theme, err = themes.Load(withAdmin("dist/admin.css", builtFS()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := themes.New(theme, nil, nil).AdminHead(t.Context()); got != "" {
+		t.Fatalf("missing admin.css: got %q", got)
+	}
+
+	// Built: link the stylesheet, followed by the live settings.
+	db := storetest.New(t)
+	files := withAdmin("dist/admin.css", builtFS())
+	files["dist/admin.css"] = &fstest.MapFile{Data: []byte(":root{}")}
+	theme, err = themes.Load(files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := theme.Register(t.Context(), db, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.DB.NewInsert().Model(&store.ThemeSettings{
+		ThemeID: "demo", Version: 1, Status: "live", Data: `{"accent":"#00FF88"}`,
+	}).Exec(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	want := `<link rel="stylesheet" id="flagfall-theme-admin" href="/theme/demo/admin.css">` +
+		`<style id="flagfall-settings">:root { --amber: #00FF88; }</style>`
+	if got := themes.New(theme, db, nil).AdminHead(t.Context()); got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+
+	// adminStyle must be a stylesheet inside the served folder.
+	for _, bad := range []string{"theme.json", "src/admin.css", "dist/../theme.json", "dist/admin.js", "/dist/admin.css"} {
+		if _, err := themes.Load(withAdmin(bad, builtFS())); err == nil {
+			t.Errorf("adminStyle %q: want an error", bad)
+		}
+	}
+}
