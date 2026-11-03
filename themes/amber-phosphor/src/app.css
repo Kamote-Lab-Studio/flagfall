@@ -81,7 +81,7 @@ td.pts, .pts { font-family: var(--display); font-weight: 600; font-size: 17px; c
 tr.me-row { background: var(--amber-bg); }
 
 /* challenge board */
-.board { margin: 0 auto; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+.board { max-width: 1440px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
 .board-main { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 26px; }
 .progress { min-width: 220px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
 .progress-row { display: flex; justify-content: space-between; }
