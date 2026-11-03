@@ -1,0 +1,15 @@
+{
+  "name": "@flagfall/theme-sdk",
+  "version": "0.0.0",
+  "description": "Build Flagfall themes: player API client, live updates, settings and translations.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "types": "./src/index.ts",
+  "files": ["dist"],
+  "scripts": {
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}

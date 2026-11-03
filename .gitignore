@@ -1,0 +1,29 @@
+# Build output
+/bin/
+/dist/
+*.exe
+
+# Runtime data (SQLite, uploads) from `flagfall serve`
+/data/
+
+# Node
+node_modules/
+web/**/dist/
+themes/**/dist/
+.vite/
+
+# Test output
+coverage.out
+e2e/test-results/
+e2e/playwright-report/
+
+# Editors and OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# Local config with secrets
+flagfall.toml
+.env
