@@ -10,7 +10,7 @@
 
 ## Quick start (developers)
 
-You need [Go 1.25+](https://go.dev/dl/), [Node 22+](https://nodejs.org/) and [pnpm 9](https://pnpm.io/).
+You need [Go 1.26+](https://go.dev/dl/), [Node 22+](https://nodejs.org/) and [pnpm 9](https://pnpm.io/).
 
 ```sh
 git clone https://github.com/flagfall/flagfall

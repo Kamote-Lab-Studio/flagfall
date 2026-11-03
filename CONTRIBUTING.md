@@ -4,7 +4,7 @@ Thanks for helping. This guide covers how to set up, what we expect in a pull re
 
 ## Set up
 
-1. Install Go 1.25+, Node 22+ and pnpm 9.
+1. Install Go 1.26+, Node 22+ and pnpm 9.
 2. `pnpm install`
 3. `make dev` starts the server on http://localhost:8080.
 4. `make test` and `make lint` must pass before you open a pull request.
