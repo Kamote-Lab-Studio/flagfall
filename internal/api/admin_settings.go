@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -82,8 +81,9 @@ type settingsView struct {
 	SMTPProblem     *string `json:"smtpProblem"`
 	DiscordSet      bool    `json:"discordWebhookSet"`
 	Storage         struct {
-		Kind string `json:"kind"`
-		Path string `json:"path"`
+		Kind     string `json:"kind"`
+		Path     string `json:"path"`
+		Redirect bool   `json:"redirect"`
 	} `json:"storage"`
 }
 
@@ -100,10 +100,7 @@ func (a *API) settingsView(ev *store.Event) settingsView {
 		}
 	}
 	v.DiscordSet = ev.ParsedSettings().DiscordWebhook != ""
-	v.Storage.Kind = "local"
-	if abs, err := filepath.Abs(FilesDir(a.cfg.DataDir)); err == nil {
-		v.Storage.Path = abs
-	}
+	v.Storage.Kind, v.Storage.Path, v.Storage.Redirect = a.files.Kind, a.files.Location, a.files.Redirect != nil
 	return v
 }
 

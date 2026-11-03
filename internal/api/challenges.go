@@ -3,10 +3,9 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/uptrace/bun"
 
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/flags"
 	"github.com/flagfall/flagfall/internal/markdown"
 	"github.com/flagfall/flagfall/internal/scoring"
@@ -419,9 +419,6 @@ func (a *API) publishScoreboard(snap *scoring.Snapshot) {
 	}
 }
 
-// FilesDir is where challenge files are stored, by SHA-256.
-func FilesDir(dataDir string) string { return filepath.Join(dataDir, "files") }
-
 func (a *API) downloadFile(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	sum := chi.URLParam(r, "sha256")
@@ -441,10 +438,21 @@ func (a *API) downloadFile(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	fh, err := os.Open(filepath.Join(FilesDir(a.cfg.DataDir), f.StorageKey))
-	if err != nil {
-		a.log.Error("challenge file missing from storage", "file", f.Name, "key", f.StorageKey, "err", err)
+	if a.files.Redirect != nil {
+		u, err := a.files.Redirect(ctx, f.StorageKey, f.Name)
+		if err != nil {
+			return err
+		}
+		w.Header().Set("Cache-Control", "no-store") // the link expires
+		http.Redirect(w, r, u, http.StatusFound)
+		return nil
+	}
+	fh, err := a.files.Open(ctx, f.StorageKey)
+	if errors.Is(err, blobs.ErrNotFound) {
+		a.log.Error("challenge file missing from storage", "file", f.Name, "key", f.StorageKey)
 		return errNotFound
+	} else if err != nil {
+		return err
 	}
 	defer fh.Close()
 

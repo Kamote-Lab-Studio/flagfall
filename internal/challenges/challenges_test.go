@@ -10,6 +10,7 @@ import (
 	"testing/fstest"
 
 	"github.com/flagfall/flagfall/challenges/sample"
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/challenges"
 	"github.com/flagfall/flagfall/internal/flags"
 	"github.com/flagfall/flagfall/internal/store"
@@ -63,7 +64,7 @@ func TestApplyCreatesThenUpdates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := challenges.Apply(ctx, s, secret, dir, specs)
+	res, err := challenges.Apply(ctx, s, secret, blobs.Local(dir), specs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +91,7 @@ func TestApplyCreatesThenUpdates(t *testing.T) {
 	// Re-import with a new value: updated in place, hint id unchanged.
 	fsys["x/challenge.yml"].Data = []byte(strings.Replace(string(fsys["x/challenge.yml"].Data), "value: 100", "value: 150", 1))
 	specs, _ = challenges.Load(fsys, ".")
-	res, err = challenges.Apply(ctx, s, secret, dir, specs)
+	res, err = challenges.Apply(ctx, s, secret, blobs.Local(dir), specs)
 	if err != nil || len(res.Updated) != 1 {
 		t.Fatalf("second apply: %+v, %v", res, err)
 	}

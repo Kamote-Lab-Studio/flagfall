@@ -46,7 +46,7 @@ func (a *API) adminBackup(w http.ResponseWriter, r *http.Request) error {
 	defer os.Remove(tmp.Name())
 	defer tmp.Close()
 	now := a.now()
-	m, err := backup.Write(ctx, a.store, FilesDir(a.cfg.DataDir), version.Version, now, tmp)
+	m, err := backup.Write(ctx, a.store, a.files, version.Version, now, tmp)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (a *API) adminRestore(w http.ResponseWriter, r *http.Request) error {
 		return errValidation(map[string]string{"file": "That isn't a Flagfall backup (.zip)."})
 	}
 	actor := currentUser(r)
-	m, err := backup.Restore(ctx, a.store, FilesDir(a.cfg.DataDir), zr)
+	m, err := backup.Restore(ctx, a.store, a.files, zr)
 	if errors.Is(err, backup.ErrInvalid) {
 		return errValidation(map[string]string{"file": strings.TrimPrefix(err.Error(), backup.ErrInvalid.Error()+": ")})
 	}

@@ -34,6 +34,8 @@ type Config struct {
 	// TrustProxy reads the client IP from X-Forwarded-For. Only set this
 	// behind a reverse proxy (Caddy, nginx, a load balancer).
 	TrustProxy bool `toml:"trust_proxy"`
+	// S3 stores challenge files in a bucket instead of DataDir/files.
+	S3 S3Config `toml:"s3"`
 
 	// secret is the decoded SecretKey, set by EnsureSecret.
 	secret []byte
@@ -68,9 +70,20 @@ func Load(lookup LookupFunc) (Config, error) {
 	env("FLAGFALL_DATA_DIR", &cfg.DataDir)
 	env("FLAGFALL_DATABASE_URL", &cfg.DatabaseURL)
 	env("FLAGFALL_SECRET_KEY", &cfg.SecretKey)
-	if v, ok := lookup("FLAGFALL_TRUST_PROXY"); ok && v != "" {
-		cfg.TrustProxy = v == "true" || v == "1"
+	flag := func(key string, dst *bool) {
+		if v, ok := lookup(key); ok && v != "" {
+			*dst = v == "true" || v == "1"
+		}
 	}
+	flag("FLAGFALL_TRUST_PROXY", &cfg.TrustProxy)
+	env("FLAGFALL_S3_BUCKET", &cfg.S3.Bucket)
+	env("FLAGFALL_S3_ENDPOINT", &cfg.S3.Endpoint)
+	env("FLAGFALL_S3_REGION", &cfg.S3.Region)
+	env("FLAGFALL_S3_ACCESS_KEY", &cfg.S3.AccessKey)
+	env("FLAGFALL_S3_SECRET_KEY", &cfg.S3.SecretKey)
+	env("FLAGFALL_S3_PREFIX", &cfg.S3.Prefix)
+	flag("FLAGFALL_S3_PATH_STYLE", &cfg.S3.PathStyle)
+	flag("FLAGFALL_S3_REDIRECT", &cfg.S3.Redirect)
 
 	def := func(dst *string, v string) {
 		if *dst == "" {
@@ -105,7 +118,62 @@ func (c Config) validate() error {
 			return err
 		}
 	}
+	if c.S3.Bucket != "" {
+		if _, _, err := c.S3.EndpointHost(); err != nil {
+			return err
+		}
+		if (c.S3.AccessKey == "") != (c.S3.SecretKey == "") {
+			return errors.New("S3 storage: set both the access key and the secret key, or neither (to use AWS_* variables or an instance role)")
+		}
+	} else if c.S3.Endpoint != "" || c.S3.AccessKey != "" {
+		return errors.New("S3 storage: set the bucket (FLAGFALL_S3_BUCKET) too, or remove the other S3 settings")
+	}
 	return nil
+}
+
+// S3Config is an S3-compatible bucket for challenge files.
+type S3Config struct {
+	Bucket string `toml:"bucket"`
+	// Endpoint is host[:port] or a URL; default s3.amazonaws.com. Use
+	// http://host:port for a local MinIO without TLS.
+	Endpoint  string `toml:"endpoint"`
+	Region    string `toml:"region"`
+	AccessKey string `toml:"access_key"`
+	SecretKey string `toml:"secret_key"`
+	// Prefix puts the files in a folder of the bucket, e.g. "flagfall/".
+	Prefix string `toml:"prefix"`
+	// PathStyle uses endpoint/bucket/key URLs instead of bucket.endpoint/key
+	// (MinIO and some others need it).
+	PathStyle bool `toml:"path_style"`
+	// Redirect sends players to the bucket with a signed URL that works
+	// for a few minutes, instead of passing files through the server.
+	// Players' browsers must be able to reach the endpoint.
+	Redirect bool `toml:"redirect"`
+}
+
+// EndpointHost returns the endpoint's host[:port] and whether it uses TLS.
+func (c S3Config) EndpointHost() (host string, secure bool, err error) {
+	e := c.Endpoint
+	if e == "" {
+		return "s3.amazonaws.com", true, nil
+	}
+	if !strings.Contains(e, "://") {
+		e = "https://" + e
+	}
+	u, err := url.Parse(e)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || strings.Trim(u.Path, "/") != "" || u.User != nil {
+		return "", false, fmt.Errorf("S3 endpoint must be a host name or an http(s) URL without a path, got %q", c.Endpoint)
+	}
+	return u.Host, u.Scheme == "https", nil
+}
+
+// KeyPrefix is Prefix with one trailing slash, or "".
+func (c S3Config) KeyPrefix() string {
+	p := strings.Trim(c.Prefix, "/")
+	if p == "" {
+		return ""
+	}
+	return p + "/"
 }
 
 // Secure reports whether the site is served over HTTPS.

@@ -13,21 +13,17 @@ package backup
 import (
 	"archive/zip"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path"
-	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/uptrace/bun"
 
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/store"
 )
 
@@ -132,8 +128,6 @@ var tables = []table{
 // notBackedUp are cleared on restore but never written to a backup.
 var notBackedUp = []string{"sessions", "password_resets", "challenge_services"}
 
-var storageKeyRE = regexp.MustCompile(`^[a-f0-9]{64}$`)
-
 // SchemaVersion is the newest applied migration.
 func SchemaVersion(ctx context.Context, db bun.IDB) (int64, error) {
 	var v int64
@@ -141,11 +135,11 @@ func SchemaVersion(ctx context.Context, db bun.IDB) (int64, error) {
 	return v, err
 }
 
-// Write writes a backup of db and the files in filesDir to w.
+// Write writes a backup of db and its challenge files to w.
 //
 // It reads everything inside one transaction so the backup is consistent;
 // write to a local file (not straight to a slow client) to keep it short.
-func Write(ctx context.Context, s *store.Store, filesDir, appVersion string, now time.Time, w io.Writer) (*Manifest, error) {
+func Write(ctx context.Context, s *store.Store, files *blobs.Store, appVersion string, now time.Time, w io.Writer) (*Manifest, error) {
 	m := &Manifest{
 		Format: Format, App: "flagfall", Version: appVersion, Dialect: string(s.Dialect),
 		CreatedAt: now.UTC(), Rows: map[string]int{},
@@ -173,12 +167,8 @@ func Write(ctx context.Context, s *store.Store, filesDir, appVersion string, now
 	}
 
 	for _, key := range keys {
-		if !storageKeyRE.MatchString(key) {
-			m.MissingFiles = append(m.MissingFiles, key)
-			continue
-		}
-		f, err := os.Open(filepath.Join(filesDir, key))
-		if errors.Is(err, os.ErrNotExist) {
+		f, err := files.Open(ctx, key)
+		if errors.Is(err, blobs.ErrNotFound) {
 			m.MissingFiles = append(m.MissingFiles, key)
 			continue
 		} else if err != nil {
@@ -240,9 +230,9 @@ func ReadManifest(ctx context.Context, s *store.Store, zr *zip.Reader) (*Manifes
 }
 
 // Restore replaces everything in db with the backup, and adds its files to
-// filesDir. It runs in one transaction: on any error nothing changes.
+// files. It runs in one transaction: on any error nothing changes.
 // All sessions are removed, so everyone signs in again.
-func Restore(ctx context.Context, s *store.Store, filesDir string, zr *zip.Reader) (*Manifest, error) {
+func Restore(ctx context.Context, s *store.Store, files *blobs.Store, zr *zip.Reader) (*Manifest, error) {
 	m, err := ReadManifest(ctx, s, zr)
 	if err != nil {
 		return nil, err
@@ -259,7 +249,7 @@ func Restore(ctx context.Context, s *store.Store, filesDir string, zr *zip.Reade
 
 	// Files first: they're content-addressed, so adding them is harmless
 	// even if the database part fails.
-	if err := restoreFiles(zr, filesDir); err != nil {
+	if err := restoreFiles(ctx, zr, files); err != nil {
 		return nil, err
 	}
 
@@ -312,52 +302,40 @@ func Restore(ctx context.Context, s *store.Store, filesDir string, zr *zip.Reade
 	return m, nil
 }
 
-func restoreFiles(zr *zip.Reader, filesDir string) error {
-	if err := os.MkdirAll(filesDir, 0o750); err != nil {
-		return err
-	}
+func restoreFiles(ctx context.Context, zr *zip.Reader, files *blobs.Store) error {
 	for _, f := range zr.File {
 		dir, key := path.Split(f.Name)
 		if dir != "files/" {
 			continue
 		}
-		if !storageKeyRE.MatchString(key) {
+		if !blobs.ValidKey(key) {
 			return invalid("unexpected file %q", f.Name)
 		}
-		dst := filepath.Join(filesDir, key)
-		if _, err := os.Stat(dst); err == nil {
+		if ok, err := files.Exists(ctx, key); err != nil {
+			return err
+		} else if ok {
 			continue // same name, same content
 		}
-		if err := restoreFile(f, filesDir, key); err != nil {
+		if err := restoreFile(ctx, f, files, key); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func restoreFile(f *zip.File, filesDir, key string) error {
+func restoreFile(ctx context.Context, f *zip.File, files *blobs.Store, key string) error {
 	rc, err := f.Open()
 	if err != nil {
 		return err
 	}
 	defer rc.Close()
-	tmp, err := os.CreateTemp(filesDir, ".restore-*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name())
-	h := sha256.New()
-	if _, err := io.Copy(io.MultiWriter(tmp, h), rc); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	if hex.EncodeToString(h.Sum(nil)) != key {
+	// Stored under the hash of what was actually read, so a damaged file
+	// can't take the place of the real one.
+	got, _, err := files.PutHashed(ctx, rc, int64(f.UncompressedSize64))
+	if errors.Is(err, blobs.ErrTooLarge) || errors.Is(err, zip.ErrChecksum) || (err == nil && got != key) {
 		return invalid("file %s is damaged (its checksum doesn't match)", key)
 	}
-	return os.Rename(tmp.Name(), filepath.Join(filesDir, key))
+	return err
 }
 
 // FileName is the suggested download name for a backup taken at t.

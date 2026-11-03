@@ -11,6 +11,7 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/challenges"
 	"github.com/flagfall/flagfall/internal/seed"
 	"github.com/flagfall/flagfall/internal/store"
@@ -87,7 +88,7 @@ func pack(slugs ...string) fstest.MapFS {
 func TestPlanAndExportRoundTrip(t *testing.T) {
 	db := storetest.New(t)
 	ctx := context.Background()
-	files := t.TempDir()
+	files := blobs.Local(t.TempDir())
 
 	specs, err := challenges.Load(pack("one", "two"), ".")
 	if err != nil {
@@ -138,7 +139,7 @@ func TestPlanAndExportRoundTrip(t *testing.T) {
 func TestExportOfSampleNeedsOnlyFlags(t *testing.T) {
 	db := storetest.New(t)
 	ctx := context.Background()
-	files := t.TempDir()
+	files := blobs.Local(t.TempDir())
 	if _, err := seed.Sample(ctx, db, secret, files, time.Now()); err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +159,7 @@ func TestExportOfSampleNeedsOnlyFlags(t *testing.T) {
 func TestPruneRetiresSolvedChallenges(t *testing.T) {
 	db := storetest.New(t)
 	ctx := context.Background()
-	files := t.TempDir()
+	files := blobs.Local(t.TempDir())
 	if _, err := seed.Sample(ctx, db, secret, files, time.Now()); err != nil {
 		t.Fatal(err)
 	}

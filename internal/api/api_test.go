@@ -19,6 +19,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/flagfall/flagfall/internal/api"
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/config"
 	"github.com/flagfall/flagfall/internal/flags"
 	"github.com/flagfall/flagfall/internal/live"
@@ -108,7 +109,7 @@ func newEnv(t *testing.T) *env {
 
 // makeEnv with box false uses the real mailer (the SMTP settings saved in
 // the database) instead of the in-memory mailbox.
-func makeEnv(t *testing.T, box bool) *env {
+func makeEnv(t *testing.T, box bool, opts ...func(*api.Options)) *env {
 	t.Helper()
 	s := storetest.New(t)
 	ctx := context.Background()
@@ -138,7 +139,11 @@ func makeEnv(t *testing.T, box bool) *env {
 	}
 	hk := &hooks{got: make(chan struct{}, 16)}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	a := api.New(api.Options{Store: s, Config: cfg, Hub: live.NewHub(), Mailer: mailer, HTTPClient: &http.Client{Transport: hk}, Logger: logger, Now: clk.Now})
+	o := api.Options{Store: s, Config: cfg, Hub: live.NewHub(), Mailer: mailer, HTTPClient: &http.Client{Transport: hk}, Logger: logger, Now: clk.Now}
+	for _, opt := range opts {
+		opt(&o)
+	}
+	a := api.New(o)
 	h := server.New(server.Options{Logger: logger, Mount: []func(chi.Router){a.Mount, a.MountAdmin}})
 	ts := httptest.NewServer(h)
 	t.Cleanup(ts.Close)
@@ -589,7 +594,7 @@ func TestFileDownload(t *testing.T) {
 	e := newEnv(t)
 	c := e.addChallenge("files", 100, "flag{f}")
 	sum := strings.Repeat("a1", 32)
-	dir := api.FilesDir(e.cfg.DataDir)
+	dir := blobs.LocalDir(e.cfg.DataDir)
 	os.MkdirAll(dir, 0o750)
 	os.WriteFile(filepath.Join(dir, sum), []byte("PK-fake-zip"), 0o600)
 	e.store.DB.NewInsert().Model(&store.File{ChallengeID: c.ID, Name: "source code.zip", StorageKey: sum, Size: 11, SHA256: sum}).Exec(context.Background())

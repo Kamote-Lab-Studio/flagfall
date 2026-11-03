@@ -15,11 +15,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
-	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -28,6 +25,7 @@ import (
 	"github.com/uptrace/bun"
 	"gopkg.in/yaml.v3"
 
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/flags"
 	"github.com/flagfall/flagfall/internal/store"
 )
@@ -296,12 +294,12 @@ type Result struct {
 }
 
 // Apply creates or updates the challenges by slug, in one transaction.
-// Files are written to filesDir by SHA-256. Flags and hints are replaced.
-func Apply(ctx context.Context, db *store.Store, secret []byte, filesDir string, specs []*Spec) (Result, error) {
+// Files are stored in files by SHA-256. Flags and hints are replaced.
+func Apply(ctx context.Context, db *store.Store, secret []byte, files *blobs.Store, specs []*Spec) (Result, error) {
 	var res Result
 	for _, s := range specs {
 		for _, f := range s.files {
-			if err := writeFile(filesDir, f); err != nil {
+			if err := files.Put(ctx, f.sha256, bytes.NewReader(f.data), int64(len(f.data))); err != nil {
 				return res, err
 			}
 		}
@@ -414,21 +412,6 @@ func syncHints(ctx context.Context, tx bun.Tx, challengeID int64, s *Spec) error
 	return nil
 }
 
-func writeFile(dir string, f loadedFile) error {
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return err
-	}
-	dst := filepath.Join(dir, f.sha256)
-	if _, err := os.Stat(dst); err == nil {
-		return nil // already stored (content-addressed)
-	}
-	tmp := dst + ".tmp"
-	if err := os.WriteFile(tmp, f.data, 0o640); err != nil {
-		return err
-	}
-	return os.Rename(tmp, dst)
-}
-
 func isNoRows(err error) bool { return errors.Is(err, sql.ErrNoRows) }
 
 func strPtr(s string) *string {
@@ -454,39 +437,6 @@ func orEmptyList(l []string) []string {
 
 // ValidSlug reports whether s can be a challenge slug.
 func ValidSlug(s string) bool { return slugRE.MatchString(s) }
-
-// StoreBlob streams r into dir under its SHA-256, the same content-addressed
-// layout Apply uses. It fails if r is larger than max bytes.
-func StoreBlob(dir string, r io.Reader, max int64) (sum string, size int64, err error) {
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return "", 0, err
-	}
-	tmp, err := os.CreateTemp(dir, "upload-*.tmp")
-	if err != nil {
-		return "", 0, err
-	}
-	defer os.Remove(tmp.Name()) // no-op after the rename
-	h := sha256.New()
-	size, err = io.Copy(io.MultiWriter(tmp, h), io.LimitReader(r, max+1))
-	if cerr := tmp.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil {
-		return "", 0, err
-	}
-	if size > max {
-		return "", 0, ErrTooLarge
-	}
-	sum = hex.EncodeToString(h.Sum(nil))
-	dst := filepath.Join(dir, sum)
-	if _, err := os.Stat(dst); err == nil {
-		return sum, size, nil
-	}
-	return sum, size, os.Rename(tmp.Name(), dst)
-}
-
-// ErrTooLarge means an upload went over its size limit.
-var ErrTooLarge = errors.New("file is too large")
 
 // LoadArchive reads challenge folders from a zip. The folders can be at the
 // top of the archive or inside a single top-level folder.

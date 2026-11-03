@@ -14,6 +14,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/flags"
 	"github.com/flagfall/flagfall/internal/store"
 )
@@ -59,8 +60,8 @@ type exportSpec struct {
 
 // Export writes every challenge to outDir/<slug>/ in the challenge.yml
 // format: challenge.yml, description.md, hints/N.md and dist/<files>.
-// outDir must be empty or not exist. Files are read from filesDir.
-func Export(ctx context.Context, db *store.Store, filesDir, outDir string) (ExportResult, error) {
+// outDir must be empty or not exist.
+func Export(ctx context.Context, db *store.Store, files *blobs.Store, outDir string) (ExportResult, error) {
 	var res ExportResult
 	if entries, err := os.ReadDir(outDir); err == nil && len(entries) > 0 {
 		return res, fmt.Errorf("%s isn't empty; export into a new folder", outDir)
@@ -135,14 +136,14 @@ func Export(ctx context.Context, db *store.Store, filesDir, outDir string) (Expo
 			spec.Hints = append(spec.Hints, HintSpec{Cost: h.Cost, Content: name})
 		}
 
-		var files []store.File
-		if err := db.DB.NewSelect().Model(&files).Where("challenge_id = ?", c.ID).Order("id").Scan(ctx); err != nil {
+		var stored []store.File
+		if err := db.DB.NewSelect().Model(&stored).Where("challenge_id = ?", c.ID).Order("id").Scan(ctx); err != nil {
 			return res, err
 		}
 		used := map[string]bool{}
-		for _, f := range files {
+		for _, f := range stored {
 			name := safeFileName(f.Name, used)
-			if err := copyBlob(filepath.Join(filesDir, f.StorageKey), filepath.Join(dir, "dist", name)); err != nil {
+			if err := copyBlob(ctx, files, f.StorageKey, filepath.Join(dir, "dist", name)); err != nil {
 				return res, fmt.Errorf("%s: file %s: %w", c.Slug, f.Name, err)
 			}
 			spec.Files = append(spec.Files, "dist/"+name)
@@ -168,8 +169,8 @@ func writeText(file, text string) error {
 	return os.WriteFile(file, []byte(text), 0o644)
 }
 
-func copyBlob(src, dst string) error {
-	in, err := os.Open(src)
+func copyBlob(ctx context.Context, files *blobs.Store, key, dst string) error {
+	in, err := files.Open(ctx, key)
 	if err != nil {
 		return err
 	}

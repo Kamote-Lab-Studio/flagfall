@@ -22,6 +22,7 @@ import (
 	"github.com/flagfall/flagfall/internal/adminui"
 	"github.com/flagfall/flagfall/internal/api"
 	"github.com/flagfall/flagfall/internal/backup"
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/config"
 	"github.com/flagfall/flagfall/internal/live"
 	"github.com/flagfall/flagfall/internal/seed"
@@ -55,11 +56,12 @@ Configuration comes from environment variables or flagfall.toml (see docs/dev/co
   FLAGFALL_DATA_DIR    data directory (default "./data")
   FLAGFALL_DATABASE_URL  database URL (default: SQLite in the data directory)
   FLAGFALL_SEED_SAMPLE   "true" loads the sample event and demo logins on the first serve (demos only)
+  FLAGFALL_S3_BUCKET     store challenge files in an S3-compatible bucket (see docs/dev/config.md)
 `
 
 func backupCmd(file string, stdout, stderr io.Writer) error {
 	ctx := context.Background()
-	cfg, db, err := setup(ctx)
+	_, db, files, err := setup(ctx)
 	if err != nil {
 		return err
 	}
@@ -76,7 +78,7 @@ func backupCmd(file string, stdout, stderr io.Writer) error {
 		defer f.Close()
 		w = f
 	}
-	m, err := backup.Write(ctx, db, api.FilesDir(cfg.DataDir), version.Version, time.Now(), w)
+	m, err := backup.Write(ctx, db, files, version.Version, time.Now(), w)
 	if err != nil {
 		return err
 	}
@@ -105,7 +107,7 @@ func backupCmd(file string, stdout, stderr io.Writer) error {
 
 func restoreCmd(file string, replace bool, out io.Writer) error {
 	ctx := context.Background()
-	cfg, db, err := setup(ctx)
+	_, db, files, err := setup(ctx)
 	if err != nil {
 		return err
 	}
@@ -132,7 +134,7 @@ func restoreCmd(file string, replace bool, out io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("%s isn't a Flagfall backup (.zip): %w", file, err)
 	}
-	m, err := backup.Restore(ctx, db, api.FilesDir(cfg.DataDir), zr)
+	m, err := backup.Restore(ctx, db, files, zr)
 	if err != nil {
 		return err
 	}
@@ -252,7 +254,7 @@ func serve(logOut io.Writer) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	cfg, db, err := setup(ctx)
+	cfg, db, files, err := setup(ctx)
 	if err != nil {
 		return err
 	}
@@ -261,7 +263,7 @@ func serve(logOut io.Writer) error {
 	// Demo containers load the sample on first start; later starts find it
 	// already there and skip.
 	if truthy(os.Getenv("FLAGFALL_SEED_SAMPLE")) {
-		if err := loadSample(ctx, cfg, db, logOut); errors.Is(err, seed.ErrNotEmpty) {
+		if err := loadSample(ctx, cfg, db, files, logOut); errors.Is(err, seed.ErrNotEmpty) {
 			logger.Info("FLAGFALL_SEED_SAMPLE is set, but the install isn't empty; not loading the sample")
 		} else if err != nil {
 			return fmt.Errorf("load the sample event: %w", err)
@@ -270,7 +272,7 @@ func serve(logOut io.Writer) error {
 
 	hub := live.NewHub()
 	defer hub.Close()
-	playerAPI := api.New(api.Options{Store: db, Config: cfg, Hub: hub, Logger: logger})
+	playerAPI := api.New(api.Options{Store: db, Config: cfg, Hub: hub, Files: files, Logger: logger})
 	if code, required, err := playerAPI.PrepareSetup(ctx); err != nil {
 		return fmt.Errorf("check for an owner account: %w", err)
 	} else if required {
@@ -328,44 +330,53 @@ func serve(logOut io.Writer) error {
 	}
 }
 
-// setup loads the config, the secret key and a migrated database.
-func setup(ctx context.Context) (config.Config, *store.Store, error) {
+// setup loads the config, the secret key, a migrated database and the
+// file store (checked, so a wrong bucket fails here, not on the first
+// download).
+func setup(ctx context.Context) (config.Config, *store.Store, *blobs.Store, error) {
 	cfg, err := config.Load(os.LookupEnv)
 	if err != nil {
-		return cfg, nil, err
+		return cfg, nil, nil, err
 	}
 	if err := cfg.EnsureSecret(); err != nil {
-		return cfg, nil, err
+		return cfg, nil, nil, err
+	}
+	files, err := blobs.FromConfig(cfg)
+	if err != nil {
+		return cfg, nil, nil, err
+	}
+	if err := files.Check(ctx); err != nil {
+		return cfg, nil, nil, fmt.Errorf("file storage (%s): %w", files.Location, err)
 	}
 	db, err := store.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
-		return cfg, nil, err
+		return cfg, nil, nil, err
 	}
 	if err := db.Migrate(ctx); err != nil {
 		db.Close()
-		return cfg, nil, err
+		return cfg, nil, nil, err
 	}
 	if err := db.EnsureEvent(ctx); err != nil {
 		db.Close()
-		return cfg, nil, err
+		return cfg, nil, nil, err
 	}
-	return cfg, db, nil
+	return cfg, db, files, nil
 }
 
 func seedSample(out io.Writer) error {
 	ctx := context.Background()
-	cfg, db, err := setup(ctx)
+	cfg, db, files, err := setup(ctx)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	return loadSample(ctx, cfg, db, out)
+	return loadSample(ctx, cfg, db, files, out)
 }
 
 // loadSample loads the sample event and its demo logins. It returns
 // seed.ErrNotEmpty if the install already has challenges or teams.
-func loadSample(ctx context.Context, cfg config.Config, db *store.Store, out io.Writer) error {
-	sum, err := seed.Sample(ctx, db, cfg.Secret(), api.FilesDir(cfg.DataDir), time.Now())
+func loadSample(ctx context.Context, cfg config.Config, db *store.Store, files *blobs.Store, out io.Writer) error {
+	sum, err := seed.Sample(ctx, db, cfg.Secret(), files, time.Now())
 	if err != nil {
 		return err
 	}

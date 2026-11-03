@@ -19,6 +19,7 @@ import (
 
 	"github.com/flagfall/flagfall/challenges/sample"
 	"github.com/flagfall/flagfall/internal/auth"
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/challenges"
 	"github.com/flagfall/flagfall/internal/store"
 )
@@ -68,7 +69,7 @@ type Summary struct {
 }
 
 // Sample loads the sample event into an empty database.
-func Sample(ctx context.Context, db *store.Store, secret []byte, filesDir string, now time.Time) (Summary, error) {
+func Sample(ctx context.Context, db *store.Store, secret []byte, files *blobs.Store, now time.Time) (Summary, error) {
 	var sum Summary
 	now = now.UTC().Truncate(time.Second)
 
@@ -94,7 +95,7 @@ func Sample(ctx context.Context, db *store.Store, secret []byte, filesDir string
 	if err != nil {
 		return sum, fmt.Errorf("sample challenges: %w", err)
 	}
-	if _, err := challenges.Apply(ctx, db, secret, filesDir, specs); err != nil {
+	if _, err := challenges.Apply(ctx, db, secret, files, specs); err != nil {
 		return sum, err
 	}
 	sum.Challenges = len(specs)

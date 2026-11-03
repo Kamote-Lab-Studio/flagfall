@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/uptrace/bun"
 
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/challenges"
 	"github.com/flagfall/flagfall/internal/flags"
 	"github.com/flagfall/flagfall/internal/markdown"
@@ -561,8 +562,8 @@ func (a *API) adminUploadFile(w http.ResponseWriter, r *http.Request) error {
 		if name == "" || name == "." || name == "/" || len(name) > 200 || strings.ContainsAny(name, "\x00") {
 			return errValidation(map[string]string{"file": "The file needs a name (up to 200 characters)."})
 		}
-		sum, size, err := challenges.StoreBlob(FilesDir(a.cfg.DataDir), part, challenges.MaxFileSize)
-		if errors.Is(err, challenges.ErrTooLarge) {
+		sum, size, err := a.files.PutHashed(ctx, part, challenges.MaxFileSize)
+		if errors.Is(err, blobs.ErrTooLarge) {
 			return errValidation(map[string]string{"file": "Files can be at most 100 MB."})
 		}
 		if err != nil {
@@ -659,7 +660,7 @@ func (a *API) adminImportChallenges(w http.ResponseWriter, r *http.Request) erro
 	if err != nil {
 		return errValidation(map[string]string{"file": err.Error()})
 	}
-	res, err := challenges.Apply(ctx, a.store, a.cfg.Secret(), FilesDir(a.cfg.DataDir), specs)
+	res, err := challenges.Apply(ctx, a.store, a.cfg.Secret(), a.files, specs)
 	if err != nil {
 		return err
 	}

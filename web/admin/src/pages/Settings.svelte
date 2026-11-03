@@ -7,7 +7,7 @@
 
   interface Settings {
     smtpHost: string; smtpPort: number; smtpUser: string; smtpPasswordSet: boolean; smtpFrom: string;
-    smtpSecurity: string; smtpProblem: string | null; discordWebhookSet: boolean; storage: { kind: string; path: string };
+    smtpSecurity: string; smtpProblem: string | null; discordWebhookSet: boolean; storage: { kind: "local" | "s3"; path: string; redirect: boolean };
   }
 
   let s = $state<Settings | null>(null);
@@ -185,8 +185,22 @@
 
   <h2>File storage</h2>
   <div class="card">
-    <p>Challenge files are kept on this server's disk at <code>{s.storage.path}</code>, and included in backups.</p>
-    <p class="hint">Storage is set when the server starts, not here, because changing it during an event would break every download.</p>
+    {#if s.storage.kind === "s3"}
+      <p>Challenge files are kept in an S3 bucket at <code>{s.storage.path}</code>, and included in backups.</p>
+      <p>
+        {#if s.storage.redirect}
+          Downloads go straight from the bucket: players get a signed link that works for 5 minutes.
+        {:else}
+          Downloads pass through this server, so players never see the bucket.
+        {/if}
+      </p>
+    {:else}
+      <p>Challenge files are kept on this server's disk at <code>{s.storage.path}</code>, and included in backups.</p>
+    {/if}
+    <p class="hint">
+      Storage is set when the server starts (<code>FLAGFALL_S3_*</code> settings), not here, because changing it during an
+      event would break every download.
+    </p>
   </div>
 
   <h2>Staff</h2>

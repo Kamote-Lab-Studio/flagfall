@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/api"
 	"github.com/flagfall/flagfall/internal/challenges"
 )
 
@@ -126,7 +125,7 @@ func importCmd(target string, yes, prune bool, out io.Writer) error {
 		return err
 	}
 	ctx := context.Background()
-	cfg, db, err := setup(ctx)
+	cfg, db, files, err := setup(ctx)
 	if err != nil {
 		return err
 	}
@@ -176,7 +175,7 @@ func importCmd(target string, yes, prune bool, out io.Writer) error {
 		}
 	}
 
-	if _, err := challenges.Apply(ctx, db, cfg.Secret(), api.FilesDir(cfg.DataDir), specs); err != nil {
+	if _, err := challenges.Apply(ctx, db, cfg.Secret(), files, specs); err != nil {
 		return err
 	}
 	fmt.Fprintf(out, "Imported: %d new, %d updated.\n", len(plan.New), len(plan.Changed))
@@ -195,12 +194,12 @@ func importCmd(target string, yes, prune bool, out io.Writer) error {
 
 func exportCmd(target string, out io.Writer) error {
 	ctx := context.Background()
-	cfg, db, err := setup(ctx)
+	_, db, files, err := setup(ctx)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	res, err := challenges.Export(ctx, db, api.FilesDir(cfg.DataDir), target)
+	res, err := challenges.Export(ctx, db, files, target)
 	if err != nil {
 		return err
 	}

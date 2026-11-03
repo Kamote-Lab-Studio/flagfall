@@ -321,7 +321,7 @@ func (a *API) postSetup(w http.ResponseWriter, r *http.Request) error {
 
 	out := map[string]any{"sampleLoaded": false}
 	if in.LoadSample {
-		if _, err := seed.Sample(ctx, a.store, a.cfg.Secret(), FilesDir(a.cfg.DataDir), a.now()); err != nil {
+		if _, err := seed.Sample(ctx, a.store, a.cfg.Secret(), a.files, a.now()); err != nil {
 			out["warning"] = "Your account was created, but the sample event couldn't be loaded: " + err.Error()
 		} else {
 			out["sampleLoaded"] = true

@@ -118,3 +118,33 @@ func TestEnsureSecretGeneratesOnceAndReuses(t *testing.T) {
 		t.Error("key file does not match")
 	}
 }
+
+func TestS3Settings(t *testing.T) {
+	cfg, err := Load(env(map[string]string{
+		"FLAGFALL_S3_BUCKET": "ctf-files", "FLAGFALL_S3_ENDPOINT": "http://minio:9000", "FLAGFALL_S3_ACCESS_KEY": "a",
+		"FLAGFALL_S3_SECRET_KEY": "b", "FLAGFALL_S3_PREFIX": "/2026/", "FLAGFALL_S3_PATH_STYLE": "true", "FLAGFALL_S3_REDIRECT": "1",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	host, secure, _ := cfg.S3.EndpointHost()
+	if host != "minio:9000" || secure || cfg.S3.KeyPrefix() != "2026/" || !cfg.S3.PathStyle || !cfg.S3.Redirect {
+		t.Fatalf("s3 = %+v host %q secure %v", cfg.S3, host, secure)
+	}
+	if host, secure, _ := (S3Config{Bucket: "b"}).EndpointHost(); host != "s3.amazonaws.com" || !secure {
+		t.Errorf("default endpoint = %q %v", host, secure)
+	}
+	if host, secure, _ := (S3Config{Endpoint: "abc.r2.cloudflarestorage.com"}).EndpointHost(); host != "abc.r2.cloudflarestorage.com" || !secure {
+		t.Errorf("bare host = %q %v", host, secure)
+	}
+
+	for name, e := range map[string]map[string]string{
+		"endpoint with a path": {"FLAGFALL_S3_BUCKET": "b", "FLAGFALL_S3_ENDPOINT": "https://s3.example.org/bucket"},
+		"half the keys":        {"FLAGFALL_S3_BUCKET": "b", "FLAGFALL_S3_ACCESS_KEY": "a"},
+		"no bucket":            {"FLAGFALL_S3_ENDPOINT": "https://s3.example.org"},
+	} {
+		if _, err := Load(env(e)); err == nil {
+			t.Errorf("%s: no error", name)
+		}
+	}
+}

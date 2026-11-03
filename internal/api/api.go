@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/config"
 	"github.com/flagfall/flagfall/internal/live"
 	"github.com/flagfall/flagfall/internal/ratelimit"
@@ -44,6 +45,7 @@ type API struct {
 	hub    *live.Hub
 	boards *scoring.Cache
 	mailer Mailer
+	files  *blobs.Store
 	// httpClient makes outgoing calls (Discord webhooks).
 	httpClient *http.Client
 	log        *slog.Logger
@@ -66,6 +68,8 @@ type Options struct {
 	Hub    *live.Hub
 	Boards *scoring.Cache
 	Mailer Mailer
+	// Files stores challenge files; nil means DataDir/files on disk.
+	Files *blobs.Store
 	// HTTPClient makes outgoing calls; tests swap its transport.
 	HTTPClient *http.Client
 	Logger     *slog.Logger
@@ -99,6 +103,9 @@ func New(o Options) *API {
 	}
 	if a.mailer == nil {
 		a.mailer = settingsMailer{a}
+	}
+	if a.files = o.Files; a.files == nil {
+		a.files = blobs.Local(blobs.LocalDir(o.Config.DataDir))
 	}
 	return a
 }

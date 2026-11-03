@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/flagfall/flagfall/internal/auth"
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/scoring"
 	"github.com/flagfall/flagfall/internal/seed"
 	"github.com/flagfall/flagfall/internal/store"
@@ -19,7 +20,7 @@ func TestSampleMatchesTheDesigns(t *testing.T) {
 	ctx := context.Background()
 	secret := []byte(strings.Repeat("s", 32))
 
-	sum, err := seed.Sample(ctx, s, secret, t.TempDir(), time.Now())
+	sum, err := seed.Sample(ctx, s, secret, blobs.Local(t.TempDir()), time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +57,7 @@ func TestSampleMatchesTheDesigns(t *testing.T) {
 		t.Error("Sample alone gave the demo player a known password")
 	}
 
-	if _, err := seed.Sample(ctx, s, secret, t.TempDir(), time.Now()); !errors.Is(err, seed.ErrNotEmpty) {
+	if _, err := seed.Sample(ctx, s, secret, blobs.Local(t.TempDir()), time.Now()); !errors.Is(err, seed.ErrNotEmpty) {
 		t.Errorf("second seed: err = %v, want ErrNotEmpty", err)
 	}
 }
@@ -64,7 +65,7 @@ func TestSampleMatchesTheDesigns(t *testing.T) {
 func TestDemoLogins(t *testing.T) {
 	s := storetest.New(t)
 	ctx := context.Background()
-	if _, err := seed.Sample(ctx, s, []byte(strings.Repeat("s", 32)), t.TempDir(), time.Now()); err != nil {
+	if _, err := seed.Sample(ctx, s, []byte(strings.Repeat("s", 32)), blobs.Local(t.TempDir()), time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	if err := seed.DemoLogins(ctx, s, time.Now()); err != nil {

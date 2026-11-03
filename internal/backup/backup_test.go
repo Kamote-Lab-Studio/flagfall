@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/flagfall/flagfall/internal/backup"
+	"github.com/flagfall/flagfall/internal/blobs"
 	"github.com/flagfall/flagfall/internal/scoring"
 	"github.com/flagfall/flagfall/internal/seed"
 	"github.com/flagfall/flagfall/internal/store"
@@ -43,7 +44,7 @@ func source(t *testing.T) (*store.Store, string, string) {
 	t.Helper()
 	s := storetest.New(t)
 	files := t.TempDir()
-	if _, err := seed.Sample(ctx, s, []byte(strings.Repeat("k", 32)), files, time.Now()); err != nil {
+	if _, err := seed.Sample(ctx, s, []byte(strings.Repeat("k", 32)), blobs.Local(files), time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	if err := seed.DemoLogins(ctx, s, time.Now()); err != nil {
@@ -68,7 +69,7 @@ func source(t *testing.T) (*store.Store, string, string) {
 func write(t *testing.T, s *store.Store, files string) (*zip.Reader, *backup.Manifest) {
 	t.Helper()
 	var buf bytes.Buffer
-	m, err := backup.Write(ctx, s, files, "test", time.Now(), &buf)
+	m, err := backup.Write(ctx, s, blobs.Local(files), "test", time.Now(), &buf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,10 +109,10 @@ func TestRoundTripIntoAnotherDatabase(t *testing.T) {
 	// Restore into a different, non-empty install.
 	dst := sqliteStore(t)
 	dstFiles := t.TempDir()
-	if _, err := seed.Sample(ctx, dst, []byte(strings.Repeat("x", 32)), dstFiles, time.Now().Add(-time.Hour)); err != nil {
+	if _, err := seed.Sample(ctx, dst, []byte(strings.Repeat("x", 32)), blobs.Local(dstFiles), time.Now().Add(-time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := backup.Restore(ctx, dst, dstFiles, zr); err != nil {
+	if _, err := backup.Restore(ctx, dst, blobs.Local(dstFiles), zr); err != nil {
 		t.Fatal(err)
 	}
 	for table, n := range m.Rows {
@@ -136,7 +137,7 @@ func TestRestoreIntoPostgresResetsIdentity(t *testing.T) {
 	// SQLite it still checks a restore into the same kind of store.
 	src := sqliteStore(t)
 	files := t.TempDir()
-	if _, err := seed.Sample(ctx, src, []byte(strings.Repeat("k", 32)), files, time.Now()); err != nil {
+	if _, err := seed.Sample(ctx, src, []byte(strings.Repeat("k", 32)), blobs.Local(files), time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	if err := seed.DemoLogins(ctx, src, time.Now()); err != nil {
@@ -144,7 +145,7 @@ func TestRestoreIntoPostgresResetsIdentity(t *testing.T) {
 	}
 	zr, _ := write(t, src, files)
 	dst := storetest.New(t)
-	if _, err := backup.Restore(ctx, dst, t.TempDir(), zr); err != nil {
+	if _, err := backup.Restore(ctx, dst, blobs.Local(t.TempDir()), zr); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := dst.DB.NewInsert().Model(&store.Bracket{Name: "After restore"}).Exec(ctx); err != nil {
@@ -163,7 +164,7 @@ func TestRestoreClearsSessions(t *testing.T) {
 		t.Fatal(err)
 	}
 	zr, _ := write(t, src, files)
-	if _, err := backup.Restore(ctx, src, files, zr); err != nil {
+	if _, err := backup.Restore(ctx, src, blobs.Local(files), zr); err != nil {
 		t.Fatal(err)
 	}
 	if n := count(t, src, "sessions"); n != 0 {
@@ -234,7 +235,7 @@ func TestBadBackupsChangeNothing(t *testing.T) {
 	for name, edit := range cases {
 		t.Run(name, func(t *testing.T) {
 			dstFiles := t.TempDir()
-			_, err := backup.Restore(ctx, src, dstFiles, rewrite(t, zr, edit))
+			_, err := backup.Restore(ctx, src, blobs.Local(dstFiles), rewrite(t, zr, edit))
 			if !errors.Is(err, backup.ErrInvalid) {
 				t.Fatalf("err = %v, want ErrInvalid", err)
 			}
