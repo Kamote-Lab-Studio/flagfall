@@ -27,6 +27,7 @@ import (
 	"github.com/flagfall/flagfall/internal/live"
 	"github.com/flagfall/flagfall/internal/seed"
 	"github.com/flagfall/flagfall/internal/server"
+	"github.com/flagfall/flagfall/internal/services"
 	"github.com/flagfall/flagfall/internal/store"
 	"github.com/flagfall/flagfall/internal/themes"
 	"github.com/flagfall/flagfall/internal/themes/bundled"
@@ -277,8 +278,12 @@ func serve(logOut io.Writer) error {
 		return err
 	}
 	themeManager := themes.NewManager(themes.NewRegistry(installed...), db, logger)
+	runner, err := newRunner(cfg, db, files, logger)
+	if err != nil {
+		return err
+	}
 	playerAPI := api.New(api.Options{Store: db, Config: cfg, Hub: hub, Files: files, Logger: logger,
-		Themes: themeManager})
+		Themes: themeManager, Services: runner})
 	themeManager.PreviewTheme = playerAPI.PreviewTheme
 	if code, required, err := playerAPI.PrepareSetup(ctx); err != nil {
 		return fmt.Errorf("check for an owner account: %w", err)
@@ -304,6 +309,8 @@ func serve(logOut io.Writer) error {
 	// Pushes scheduled announcements to players when they go out, and makes
 	// scheduled theme switches live.
 	go playerAPI.RunScheduler(ctx, 15*time.Second)
+	// Keeps challenge containers in the state organizers chose.
+	go runner.Run(ctx, 15*time.Second)
 
 	srv := &http.Server{
 		Addr: cfg.Addr,
@@ -398,4 +405,19 @@ func loadSample(ctx context.Context, cfg config.Config, db *store.Store, files *
 	fmt.Fprintf(out, "  owner (admin panel at /admin):    %s\n", seed.DemoOwnerEmail)
 	fmt.Fprintf(out, "  password for both:                %s\n", seed.DemoPassword)
 	return nil
+}
+
+// newRunner returns the challenge container runner. Without
+// FLAGFALL_DOCKER_HOST it lists services but can't start them.
+func newRunner(cfg config.Config, db *store.Store, files *blobs.Store, logger *slog.Logger) (*services.Runner, error) {
+	o := services.Options{Store: db, Files: files, Logger: logger, Bind: cfg.Services.Bind, ProbeHost: cfg.Services.ProbeHost}
+	if cfg.Services.DockerHost != "" {
+		d, err := services.NewDocker(cfg.Services.DockerHost)
+		if err != nil {
+			return nil, err
+		}
+		o.Docker = d
+		logger.Info("challenge containers are on", "docker_host", cfg.Services.DockerHost)
+	}
+	return services.New(o), nil
 }

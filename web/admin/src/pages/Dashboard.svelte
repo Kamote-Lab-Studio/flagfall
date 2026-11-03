@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api, message } from "../lib/api";
   import { href } from "../lib/router.svelte";
+  import ServicesPanel from "../components/ServicesPanel.svelte";
   import type { Dashboard } from "../lib/types";
   import { when } from "../lib/util";
 
@@ -17,10 +18,21 @@
     }
   }
 
+  // Refresh every 15 seconds, or every 3 while a container is starting.
   onMount(() => {
-    load();
-    const t = setInterval(load, 15_000);
-    return () => clearInterval(t);
+    let t: ReturnType<typeof setTimeout>;
+    let stopped = false;
+    const tick = async () => {
+      await load();
+      if (stopped) return;
+      const starting = d?.services.some((s) => s.desired === "running" && s.state === "starting");
+      t = setTimeout(tick, starting ? 3_000 : 15_000);
+    };
+    tick();
+    return () => {
+      stopped = true;
+      clearTimeout(t);
+    };
   });
 </script>
 
@@ -57,6 +69,9 @@
         {/each}
       </tbody>
     </table>
+  {/if}
+  {#if d.services.length}
+    <ServicesPanel services={d.services} enabled={d.servicesEnabled} onchange={load} />
   {/if}
   <p class="hint">Refreshes every 15 seconds.</p>
 {:else if !error}

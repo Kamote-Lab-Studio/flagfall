@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/flagfall/flagfall/internal/scoring"
+	"github.com/flagfall/flagfall/internal/services"
 	"github.com/flagfall/flagfall/internal/store"
 )
 
@@ -358,10 +359,27 @@ func (a *API) adminDashboard(w http.ResponseWriter, r *http.Request) error {
 	if !a.canEmail(ctx) {
 		warnings = append(warnings, "No mail server is set up (Settings), so password reset emails go to the server log.")
 	}
+	svcs, err := a.services.List(ctx)
+	if err != nil {
+		return err
+	}
+	for _, s := range svcs {
+		switch {
+		case s.Desired != services.DesiredRunning:
+		case !a.services.Enabled():
+			warnings = append(warnings, s.Name+"'s container should be running, but challenge containers are off (set FLAGFALL_DOCKER_HOST).")
+		case s.State == services.StateFailed:
+			warnings = append(warnings, s.Name+"'s container failed: "+s.Message)
+		case s.State == services.StateUnhealthy:
+			warnings = append(warnings, s.Name+"'s container isn't healthy: "+s.Message)
+		}
+	}
 	if warnings == nil {
 		warnings = []string{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
+		"services":             svcs,
+		"servicesEnabled":      a.services.Enabled(),
 		"state":                ev.State(now),
 		"playersOnline":        online,
 		"teams":                count((*store.Team)(nil), ""),

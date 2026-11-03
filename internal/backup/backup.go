@@ -24,6 +24,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/flagfall/flagfall/internal/blobs"
+	"github.com/flagfall/flagfall/internal/challenges"
 	"github.com/flagfall/flagfall/internal/store"
 )
 
@@ -169,12 +170,23 @@ func Write(ctx context.Context, s *store.Store, files *blobs.Store, appVersion s
 		if err := tx.NewSelect().Model((*store.ThemeImage)(nil)).Column("sha256").Scan(ctx, &images); err != nil {
 			return err
 		}
+		// So are the build files of challenge containers.
+		var specs []*string
+		if err := tx.NewSelect().Model((*store.Challenge)(nil)).Column("service").Where("service IS NOT NULL").Scan(ctx, &specs); err != nil {
+			return err
+		}
+		for _, raw := range specs {
+			if spec, err := challenges.ParseService(raw); err == nil && spec != nil && spec.Build() {
+				images = append(images, spec.Context)
+			}
+		}
 		seen := map[string]bool{}
 		for _, k := range keys {
 			seen[k] = true
 		}
 		for _, k := range images {
 			if !seen[k] {
+				seen[k] = true
 				keys = append(keys, k)
 			}
 		}

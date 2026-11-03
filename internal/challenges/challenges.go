@@ -45,7 +45,7 @@ type Spec struct {
 	Hints       []HintSpec     `yaml:"hints"`
 	Files       []string       `yaml:"files"`
 	Connection  string         `yaml:"connection"`
-	Service     map[string]any `yaml:"service"`
+	Service     *ServiceYAML   `yaml:"service"`
 	ThemeFields map[string]any `yaml:"theme_fields"`
 	Tags        []string       `yaml:"tags"`
 	VisibleFrom *time.Time     `yaml:"visible_from"`
@@ -57,6 +57,8 @@ type Spec struct {
 	descriptionMD string
 	hintContent   []string
 	files         []loadedFile
+	service       *ServiceSpec
+	buildContext  []byte // tar of the folder, when the service is built from a Dockerfile
 }
 
 type DynamicSpec struct {
@@ -259,6 +261,9 @@ func loadOne(fsys fs.FS, file string) (*Spec, Problems) {
 		sum := sha256.Sum256(data)
 		s.files = append(s.files, loadedFile{name: path.Base(clean), data: data, sha256: hex.EncodeToString(sum[:])})
 	}
+	if s.Service != nil {
+		s.service, s.buildContext = checkService(fsys, s.dir, s.Service, bad)
+	}
 	if len(ps) > 0 {
 		return nil, ps
 	}
@@ -300,6 +305,11 @@ func Apply(ctx context.Context, db *store.Store, secret []byte, files *blobs.Sto
 	for _, s := range specs {
 		for _, f := range s.files {
 			if err := files.Put(ctx, f.sha256, bytes.NewReader(f.data), int64(len(f.data))); err != nil {
+				return res, err
+			}
+		}
+		if s.buildContext != nil {
+			if err := files.Put(ctx, s.service.Context, bytes.NewReader(s.buildContext), int64(len(s.buildContext))); err != nil {
 				return res, err
 			}
 		}
@@ -378,6 +388,11 @@ func (s *Spec) fill(c *store.Challenge) {
 	c.Connection = strPtr(s.Connection)
 	c.ThemeFields, c.Tags, c.Requires = string(themeFields), string(tags), string(requires)
 	c.VisibleFrom = s.VisibleFrom
+	c.Service = nil
+	if s.service != nil {
+		b, _ := json.Marshal(s.service)
+		c.Service = strPtr(string(b))
+	}
 	c.State = s.State
 	if c.State == "" {
 		c.State = "visible"

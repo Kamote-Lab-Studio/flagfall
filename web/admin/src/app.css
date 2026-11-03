@@ -102,6 +102,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .notice.bad { border-color: var(--bad); }
 .empty { color: var(--muted); padding: 1rem 0; }
 .muted { color: var(--muted); }
+.small { font-size: 0.85rem; }
 
 .rendered { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.75rem 1rem; }
 .rendered :first-child { margin-top: 0; }

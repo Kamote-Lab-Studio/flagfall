@@ -61,7 +61,15 @@ export interface Dashboard {
   state: string; playersOnline: number; teams: number; players: number; submissions: number;
   submissionsPerMinute: number; solves: number; warnings: string[];
   challenges: { id: string; slug: string; name: string; category: string; state: string; solves: number; attempts: number; firstBloodTeam: string | null; firstBloodAt: string | null }[];
+  services: ChallengeService[]; servicesEnabled: boolean;
 }
+
+export type ServiceState = "stopped" | "starting" | "running" | "unhealthy" | "failed";
+export interface ChallengeService {
+  slug: string; name: string; image: string; port: number; desired: "running" | "stopped"; state: ServiceState;
+  message: string; hostPort: number | null; cpu: number; memoryMB: number; checkedAt: string | null;
+}
+export interface ServiceList { enabled: boolean; message?: string; services: ChallengeService[] }
 
 export interface AuditEntry { id: string; actorId: string | null; actorName: string | null; action: string; target: string | null; details: string | null; ip: string | null; at: string }
 

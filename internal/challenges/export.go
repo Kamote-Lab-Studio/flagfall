@@ -1,6 +1,7 @@
 package challenges
 
 import (
+	"archive/tar"
 	"context"
 	"encoding/json"
 	"errors"
@@ -51,6 +52,7 @@ type exportSpec struct {
 	Hints       []HintSpec     `yaml:"hints,omitempty"`
 	Files       []string       `yaml:"files,omitempty"`
 	Connection  string         `yaml:"connection,omitempty"`
+	Service     *ServiceYAML   `yaml:"service,omitempty"`
 	ThemeFields map[string]any `yaml:"theme_fields,omitempty"`
 	Tags        []string       `yaml:"tags,omitempty"`
 	VisibleFrom *time.Time     `yaml:"visible_from,omitempty"`
@@ -96,6 +98,20 @@ func Export(ctx context.Context, db *store.Store, files *blobs.Store, outDir str
 		case "retired":
 			spec.State = "hidden"
 			res.Retired = append(res.Retired, c.Slug)
+		}
+		// The build context goes first: the files written below replace
+		// their copies in it with what the database holds.
+		svc, err := ParseService(c.Service)
+		if err != nil {
+			return res, fmt.Errorf("%s: %w", c.Slug, err)
+		}
+		if svc != nil {
+			spec.Service = svc.toYAML()
+			if svc.Build() {
+				if err := extractContext(ctx, files, svc.Context, dir); err != nil {
+					return res, fmt.Errorf("%s: service build files: %w", c.Slug, err)
+				}
+			}
 		}
 		_ = json.Unmarshal([]byte(c.ThemeFields), &spec.ThemeFields)
 		_ = json.Unmarshal([]byte(c.Tags), &spec.Tags)
@@ -211,4 +227,43 @@ func title(s string) string {
 		return ""
 	}
 	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+// extractContext writes a stored build context (see BuildContext) back into
+// the challenge folder.
+func extractContext(ctx context.Context, files *blobs.Store, key, dir string) error {
+	in, err := files.Open(ctx, key)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	tr := tar.NewReader(in)
+	for {
+		h, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		name := path.Clean(h.Name)
+		if h.Typeflag != tar.TypeReg || path.IsAbs(name) || strings.HasPrefix(name, "..") {
+			continue // BuildContext writes only plain files inside the folder
+		}
+		dst := filepath.Join(dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return err
+		}
+		out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(h.Mode&0o755)|0o644)
+		if err != nil {
+			return err
+		}
+		if _, err := io.Copy(out, io.LimitReader(tr, MaxBuildContext)); err != nil {
+			out.Close()
+			return err
+		}
+		if err := out.Close(); err != nil {
+			return err
+		}
+	}
 }

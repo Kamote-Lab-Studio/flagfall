@@ -1,0 +1,24 @@
+# Lets Flagfall start challenge containers (the `service:` block in
+# challenge.yml). Add it to the usual command:
+#
+#   docker compose -f compose.yaml -f compose.services.yaml up -d --build
+#
+# This hands Flagfall the Docker socket. Anyone who controls the Docker API
+# controls this host, so only use it on a machine dedicated to the event,
+# and keep admin accounts to people you trust with that.
+#
+# DOCKER_GID is the group that owns the socket: 0 on Docker Desktop; on
+# Linux, usually `getent group docker | cut -d: -f3`.
+
+services:
+  flagfall:
+    environment:
+      FLAGFALL_DOCKER_HOST: unix:///var/run/docker.sock
+      # Health checks reach published challenge ports through the host.
+      FLAGFALL_SERVICES_PROBE_HOST: host.docker.internal
+    group_add:
+      - "${DOCKER_GID:-0}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

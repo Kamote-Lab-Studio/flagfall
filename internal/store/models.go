@@ -118,8 +118,26 @@ type Challenge struct {
 	ThemeFields   string     `bun:"theme_fields"`
 	Tags          string     `bun:"tags"`
 	Position      int        `bun:"position"`
-	CreatedAt     time.Time  `bun:"created_at"`
-	UpdatedAt     time.Time  `bun:"updated_at"`
+	// Service is the checked `service:` spec as JSON (challenges.ServiceSpec),
+	// or nil when the challenge has no container.
+	Service   *string   `bun:"service"`
+	CreatedAt time.Time `bun:"created_at"`
+	UpdatedAt time.Time `bun:"updated_at"`
+}
+
+// ChallengeService is the state of a challenge's container: what the
+// organizer asked for and what the runner last saw.
+type ChallengeService struct {
+	bun.BaseModel `bun:"table:challenge_services"`
+
+	ChallengeID int64      `bun:"challenge_id,pk"`
+	Runtime     string     `bun:"runtime"` // docker (kubernetes in Phase 3)
+	Ref         string     `bun:"ref"`     // container name
+	Desired     string     `bun:"desired"` // running or stopped
+	Status      string     `bun:"status"`  // see services.State*
+	Message     string     `bun:"message"`
+	HostPort    *int       `bun:"host_port"`
+	CheckedAt   *time.Time `bun:"checked_at"`
 }
 
 // VisibleAt reports whether players may see the challenge at time t.

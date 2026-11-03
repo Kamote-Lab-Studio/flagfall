@@ -21,6 +21,7 @@ import (
 	"github.com/flagfall/flagfall/internal/live"
 	"github.com/flagfall/flagfall/internal/ratelimit"
 	"github.com/flagfall/flagfall/internal/scoring"
+	"github.com/flagfall/flagfall/internal/services"
 	"github.com/flagfall/flagfall/internal/store"
 	"github.com/flagfall/flagfall/internal/themes"
 )
@@ -49,6 +50,9 @@ type API struct {
 	files  *blobs.Store
 	theme  func() *themes.Theme
 	themes *themes.Manager
+	// services runs challenge containers; without a Docker host it only
+	// lists them.
+	services *services.Runner
 	// httpClient makes outgoing calls (Discord webhooks).
 	httpClient *http.Client
 	log        *slog.Logger
@@ -80,6 +84,9 @@ type Options struct {
 	// section). Nil turns those admin routes off. When Theme is nil, the
 	// live theme from Themes is used for challenge fields.
 	Themes *themes.Manager
+	// Services runs challenge containers. Nil means a runner without Docker,
+	// which lists services but can't start them.
+	Services *services.Runner
 	// HTTPClient makes outgoing calls; tests swap its transport.
 	HTTPClient *http.Client
 	Logger     *slog.Logger
@@ -120,6 +127,9 @@ func New(o Options) *API {
 	}
 	if a.files = o.Files; a.files == nil {
 		a.files = blobs.Local(blobs.LocalDir(o.Config.DataDir))
+	}
+	if a.services = o.Services; a.services == nil {
+		a.services = services.New(services.Options{Store: o.Store, Files: a.files, Logger: o.Logger})
 	}
 	return a
 }

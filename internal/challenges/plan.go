@@ -123,6 +123,7 @@ func diff(ctx context.Context, db bun.IDB, secret []byte, s *Spec, c *store.Chal
 	add(want.Tags != c.Tags, "tags")
 	add(want.Requires != c.Requires, "requires")
 	add(want.ThemeFields != c.ThemeFields, "theme_fields")
+	add(deref(want.Service) != deref(c.Service), "service")
 
 	var fl []store.Flag
 	if err := db.NewSelect().Model(&fl).Where("challenge_id = ?", c.ID).Scan(ctx); err != nil {

@@ -36,9 +36,22 @@ type Config struct {
 	TrustProxy bool `toml:"trust_proxy"`
 	// S3 stores challenge files in a bucket instead of DataDir/files.
 	S3 S3Config `toml:"s3"`
+	// Services runs challenge containers (`service:` in challenge.yml).
+	Services ServicesConfig `toml:"services"`
 
 	// secret is the decoded SecretKey, set by EnsureSecret.
 	secret []byte
+}
+
+// ServicesConfig says how to reach Docker for challenge containers.
+type ServicesConfig struct {
+	// DockerHost is the Docker API: unix:///var/run/docker.sock or
+	// tcp://host:port. Empty turns challenge containers off.
+	DockerHost string `toml:"docker_host"`
+	// Bind is the host address published challenge ports listen on.
+	Bind string `toml:"bind"`
+	// ProbeHost is where Flagfall reaches published ports for health checks.
+	ProbeHost string `toml:"probe_host"`
 }
 
 // LookupFunc matches os.LookupEnv, so tests can pass a fake environment.
@@ -84,6 +97,9 @@ func Load(lookup LookupFunc) (Config, error) {
 	env("FLAGFALL_S3_PREFIX", &cfg.S3.Prefix)
 	flag("FLAGFALL_S3_PATH_STYLE", &cfg.S3.PathStyle)
 	flag("FLAGFALL_S3_REDIRECT", &cfg.S3.Redirect)
+	env("FLAGFALL_DOCKER_HOST", &cfg.Services.DockerHost)
+	env("FLAGFALL_SERVICES_BIND", &cfg.Services.Bind)
+	env("FLAGFALL_SERVICES_PROBE_HOST", &cfg.Services.ProbeHost)
 
 	def := func(dst *string, v string) {
 		if *dst == "" {

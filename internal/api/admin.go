@@ -99,6 +99,8 @@ func (a *API) MountAdmin(r chi.Router) {
 			a.mountAdminData(r)
 			a.mountAdminSettings(r)
 			a.mountAdminThemes(r)
+			a.mountAdminServices(r)
+			a.mountAdminServices(r)
 		})
 
 		r.NotFound(func(w http.ResponseWriter, r *http.Request) { writeError(w, errNotFound) })
