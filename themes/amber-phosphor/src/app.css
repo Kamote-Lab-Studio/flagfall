@@ -200,6 +200,13 @@ main.split { padding: 0; }
 .form-foot { display: flex; flex-direction: column; gap: 10px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); }
 .form-foot a, .field-row a, .register p a, .check a { color: var(--amber); }
 @media (max-width: 700px) { .split-left, .split-right { padding: 32px 24px; } .term-big { font-size: 44px; } }
+/* Wide screens: keep both halves inside a centered 1280px column so the form
+   and headline don't drift to the window edges. Backgrounds stay full-bleed. */
+@media (min-width: 1280px) {
+  .split { --split-gutter: max(64px, calc((100vw - 1280px) / 2)); }
+  .split-left { flex: 1 1 0; padding-left: var(--split-gutter); }
+  .split-right { flex: 0 0 calc(560px + var(--split-gutter)); padding-right: var(--split-gutter); }
+}
 
 /* forms */
 .stack { display: flex; flex-direction: column; gap: 18px; }
