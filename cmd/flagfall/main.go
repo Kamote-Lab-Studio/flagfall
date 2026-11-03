@@ -29,8 +29,8 @@ import (
 	"github.com/flagfall/flagfall/internal/server"
 	"github.com/flagfall/flagfall/internal/store"
 	"github.com/flagfall/flagfall/internal/themes"
+	"github.com/flagfall/flagfall/internal/themes/bundled"
 	"github.com/flagfall/flagfall/internal/version"
-	amberphosphor "github.com/flagfall/flagfall/themes/amber-phosphor"
 	adminweb "github.com/flagfall/flagfall/web/admin"
 )
 
@@ -272,11 +272,11 @@ func serve(logOut io.Writer) error {
 
 	hub := live.NewHub()
 	defer hub.Close()
-	theme, err := activeTheme()
+	installed, err := bundled.Load()
 	if err != nil {
 		return err
 	}
-	themeManager := themes.NewManager(themes.NewRegistry(theme), db, logger)
+	themeManager := themes.NewManager(themes.NewRegistry(installed...), db, logger)
 	playerAPI := api.New(api.Options{Store: db, Config: cfg, Hub: hub, Files: files, Logger: logger,
 		Themes: themeManager})
 	themeManager.PreviewTheme = playerAPI.PreviewTheme
@@ -287,11 +287,13 @@ func serve(logOut io.Writer) error {
 			"url", cfg.PublicURL+"/admin", "setup_code", code)
 	}
 
-	if err := theme.Register(ctx, db, time.Now()); err != nil {
-		return fmt.Errorf("register the default theme: %w", err)
-	}
-	if !theme.Built() {
-		logger.Warn("the player theme isn't built; pages show a build reminder (run make web-build, then rebuild)")
+	for _, t := range installed {
+		if err := t.Register(ctx, db, time.Now()); err != nil {
+			return fmt.Errorf("register the %s theme: %w", t.Manifest.ID, err)
+		}
+		if !t.Built() {
+			logger.Warn("a bundled theme isn't built; it can't be previewed or published (run make web-build, then rebuild)", "theme", t.Manifest.ID)
+		}
 	}
 	themeHandler := themes.New(themeManager)
 	adminPanel := adminui.New(adminweb.FS).WithHead(themeHandler.AdminHead)
@@ -396,14 +398,4 @@ func loadSample(ctx context.Context, cfg config.Config, db *store.Store, files *
 	fmt.Fprintf(out, "  owner (admin panel at /admin):    %s\n", seed.DemoOwnerEmail)
 	fmt.Fprintf(out, "  password for both:                %s\n", seed.DemoPassword)
 	return nil
-}
-
-// activeTheme is the player theme. Until the theme manager lands it is
-// always the bundled Amber Phosphor.
-func activeTheme() (*themes.Theme, error) {
-	t, err := themes.Load(amberphosphor.FS)
-	if err != nil {
-		return nil, fmt.Errorf("load the default theme: %w", err)
-	}
-	return t, nil
 }

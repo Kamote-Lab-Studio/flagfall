@@ -1,0 +1,34 @@
+{
+  "$schema": "../../docs/dev/schemas/theme.schema.json",
+  "manifestVersion": 1,
+  "id": "starter",
+  "name": "Starter",
+  "description": "Plain, readable and small: the reference theme to copy when you build your own.",
+  "version": "1.0.0",
+  "author": "The Flagfall Authors",
+  "license": "Apache-2.0",
+  "flagfall": ">=0.1.0 <2.0.0",
+  "entry": "dist/index.html",
+  "pages": {
+    "board": "/",
+    "challenge": "/challenges/:slug",
+    "scoreboard": "/scoreboard",
+    "teams": "/teams",
+    "team": "/teams/:id",
+    "page": "/p/:slug",
+    "signIn": "/sign-in",
+    "signUp": "/sign-up",
+    "account": "/account",
+    "announcements": "/announcements",
+    "notStarted": "/starting-soon",
+    "over": "/ended",
+    "resetPassword": "/reset-password"
+  },
+  "settings": [
+    { "key": "accent", "type": "color", "label": "Accent color", "group": "Colors", "default": "#0B5FFF", "cssVar": "--accent", "contrastWith": "background" },
+    { "key": "background", "type": "color", "label": "Background", "group": "Colors", "default": "#FFFFFF", "cssVar": "--bg" },
+    { "key": "text", "type": "color", "label": "Text", "group": "Colors", "default": "#1A1D23", "cssVar": "--text", "contrastWith": "background", "minContrast": 7 },
+    { "key": "logo", "type": "image", "label": "Logo", "group": "Branding", "accept": ["image/svg+xml", "image/png", "image/webp"], "maxBytes": 524288 },
+    { "key": "tagline", "type": "text", "label": "Board tagline", "group": "Wording", "default": "Find the flag, submit it, score.", "maxLength": 120 }
+  ]
+}

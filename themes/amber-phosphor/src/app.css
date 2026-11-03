@@ -284,6 +284,8 @@ textarea { min-height: 96px; padding: 10px 14px; background: var(--panel); borde
 .desc :is(p, ul, ol, pre) { margin: 0 0 10px; }
 .desc pre { padding: 12px; background: var(--deep); border: 1px solid var(--line-2); border-radius: 4px; overflow-x: auto; }
 .desc a { color: var(--amber); }
+/* Links inside text are underlined, not told apart by color alone (WCAG 1.4.1). */
+.desc a, p a:not(.btn) { text-decoration: underline; text-underline-offset: 2px; }
 .conn { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .conn code { display: block; padding: 10px 12px; background: var(--deep); border: 1px solid var(--line-2); border-radius: 4px; word-break: break-all; }
 .files { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }

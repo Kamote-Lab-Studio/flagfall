@@ -1,0 +1,24 @@
+{
+  "name": "@flagfall/theme-starter",
+  "version": "1.0.0-dev",
+  "private": true,
+  "description": "Starter: the smallest complete Flagfall theme. Copy it to build your own.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+  },
+  "dependencies": {
+    "@flagfall/theme-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5",
+    "@tsconfig/svelte": "^5",
+    "svelte": "^5",
+    "svelte-check": "^4",
+    "typescript": "^5.9",
+    "vite": "^6"
+  }
+}

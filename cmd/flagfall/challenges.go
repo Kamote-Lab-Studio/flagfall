@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/flagfall/flagfall/internal/challenges"
+	"github.com/flagfall/flagfall/internal/themes"
+	"github.com/flagfall/flagfall/internal/themes/bundled"
 )
 
 const challengesUsage = `usage:
@@ -230,10 +232,12 @@ func slugs(specs []*challenges.Spec) string {
 	return strings.Join(s, ", ")
 }
 
-// checkThemeFields checks theme_fields against the active theme: wrong
-// types fail, missing required fields and unused keys are printed.
+// checkThemeFields checks theme_fields against the default theme (the
+// command runs without a database, so it can't know which theme is
+// published): wrong types fail, missing required fields and unused keys
+// are printed.
 func checkThemeFields(specs []*challenges.Spec, out io.Writer) error {
-	theme, err := activeTheme()
+	theme, err := defaultTheme()
 	if err != nil {
 		return err
 	}
@@ -249,4 +253,18 @@ func checkThemeFields(specs []*challenges.Spec, out io.Writer) error {
 		fmt.Fprintln(out, "note: "+note)
 	}
 	return nil
+}
+
+// defaultTheme is the bundled theme players get until another is published.
+func defaultTheme() (*themes.Theme, error) {
+	list, err := bundled.Load()
+	if err != nil {
+		return nil, err
+	}
+	for _, t := range list {
+		if t.Manifest.ID == themes.DefaultID {
+			return t, nil
+		}
+	}
+	return nil, fmt.Errorf("the default theme %q isn't bundled", themes.DefaultID)
 }
