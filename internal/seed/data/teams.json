@@ -232,33 +232,7 @@
      "captain": false
     }
    ],
-   "solves": [
-    {
-     "challenge": "packet-archaeology",
-     "by": "kaito",
-     "minutesAgo": 134
-    },
-    {
-     "challenge": "baby-rsa",
-     "by": "liza",
-     "minutesAgo": 340
-    },
-    {
-     "challenge": "stack-smasher",
-     "by": "kaito",
-     "minutesAgo": 501
-    },
-    {
-     "challenge": "cookie-jar",
-     "by": "liza",
-     "minutesAgo": 707
-    },
-    {
-     "challenge": "sanity-check",
-     "by": "mrdc",
-     "minutesAgo": 782
-    }
-   ]
+   "solves": []
   },
   {
    "name": "r00tbeer",
