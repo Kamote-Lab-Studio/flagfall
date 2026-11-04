@@ -40,3 +40,6 @@ web/admin/dist/*
 # Playwright
 e2e/test-results/
 e2e/playwright-report/
+
+# The maintainer's private planning notes (kept out of the repository)
+/flagfall-master-plan.md

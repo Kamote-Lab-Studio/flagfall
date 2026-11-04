@@ -2,7 +2,7 @@
 
 **A free, self-hosted CTF platform you can run anywhere and re-skin without code.**
 
-> **Status: pre-alpha.** The platform, admin panel and two themes work end to end; packaging and more themes are in progress (Phase 3). Nothing is released yet. See [PLAN.md](PLAN.md) for the roadmap and [flagfall-master-plan.md](flagfall-master-plan.md) for the full design.
+> **Status: pre-alpha.** The platform, admin panel and two themes work end to end; packaging and more themes are in progress (Phase 3). Nothing is released yet. See [PLAN.md](PLAN.md) for the roadmap and [docs/dev](docs/dev) for the design.
 
 - **Run anywhere.** One binary or one container. SQLite by default, PostgreSQL for big events. Works offline, so it also runs on air-gapped training networks.
 - **Re-skin without code.** Pick a theme in the admin panel, change its colors, logo and wording, preview it on live data, publish.
