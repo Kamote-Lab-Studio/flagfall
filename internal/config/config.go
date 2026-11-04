@@ -124,14 +124,12 @@ func (c Config) validate() error {
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return fmt.Errorf("public URL must be an http or https URL, got %q", c.PublicURL)
 	}
-	db, err := url.Parse(c.DatabaseURL)
-	if err != nil {
-		return fmt.Errorf("database URL is not valid: %w", err)
-	}
-	switch db.Scheme {
+	// Scheme only: url.Parse rejects sqlite://:memory: on some Go releases.
+	scheme, _, _ := strings.Cut(c.DatabaseURL, "://")
+	switch scheme {
 	case "sqlite", "postgres", "postgresql":
 	default:
-		return fmt.Errorf("database URL must start with sqlite:// or postgres://, got %q", db.Scheme+"://")
+		return fmt.Errorf("database URL must start with sqlite:// or postgres://, got %q", c.DatabaseURL)
 	}
 	if c.SecretKey != "" {
 		if _, err := decodeSecret(c.SecretKey); err != nil {

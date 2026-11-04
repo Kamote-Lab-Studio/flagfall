@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,13 +45,17 @@ const pgMaxConns = 20
 //
 // SQLite URLs: sqlite://path/to/file.db, or sqlite://:memory: for tests.
 func Open(ctx context.Context, dbURL string) (*Store, error) {
-	u, err := url.Parse(dbURL)
-	if err != nil {
-		return nil, fmt.Errorf("parse database URL: %w", err)
+	// Only the scheme is read here. url.Parse would reject sqlite://:memory:
+	// on some Go releases (":memory:" looks like a bad port), and each
+	// driver parses the rest itself.
+	scheme, _, ok := strings.Cut(dbURL, "://")
+	if !ok {
+		return nil, fmt.Errorf("database URL must start with sqlite:// or postgres://")
 	}
 
 	var s *Store
-	switch u.Scheme {
+	var err error
+	switch scheme {
 	case "sqlite":
 		s, err = openSQLite(strings.TrimPrefix(dbURL, "sqlite://"))
 	case "postgres", "postgresql":
@@ -66,7 +69,7 @@ func Open(ctx context.Context, dbURL string) (*Store, error) {
 		sqldb.SetConnMaxIdleTime(5 * time.Minute)
 		s = &Store{DB: bun.NewDB(sqldb, pgdialect.New()), Dialect: Postgres}
 	default:
-		return nil, fmt.Errorf("unsupported database scheme %q", u.Scheme)
+		return nil, fmt.Errorf("unsupported database scheme %q", scheme)
 	}
 	if err != nil {
 		return nil, err
