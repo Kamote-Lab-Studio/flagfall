@@ -31,6 +31,10 @@ with the development `compose.yaml` at the repository root.
   signs sessions and hashes flags.
 - **Upgrades:** set `FLAGFALL_IMAGE` to a release tag (for example
   `ghcr.io/flagfall/flagfall:1.0.0`), then `docker compose pull && docker compose up -d`.
+  A version that changes the database backs it up to `/data/backups` first,
+  and won't start while the event is running unless you confirm it
+  (`docker compose run --rm flagfall migrate --during-event`). See
+  [docs/dev/config.md](../docs/dev/config.md#upgrades).
 - **Certificate notices:** add `email you@example.org` in a global block at
   the top of the `Caddyfile`.
 - Flagfall isn't published on a port; Caddy is the only way in, which is why

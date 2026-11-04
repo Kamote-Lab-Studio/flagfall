@@ -45,6 +45,8 @@ Commands:
   seed sample  Load the sample event (12 challenges, 10 teams) into an empty install
   backup <file>   Write a backup (database and uploaded files) to a .zip; "-" for stdout
   restore <file>  Restore a backup into an empty install (--replace to overwrite one; stop the server first)
+  migrate [--during-event]
+               Upgrade the database now (serve does this too); backs it up first
   challenges check|import|export <folder>
                Validate, import or export challenge.yml folders (flagfall challenges for details)
   healthcheck  Exit 0 if the server on FLAGFALL_ADDR answers /healthz (for containers)
@@ -57,6 +59,7 @@ Configuration comes from environment variables or flagfall.toml (see docs/dev/co
   FLAGFALL_DATA_DIR    data directory (default "./data")
   FLAGFALL_DATABASE_URL  database URL (default: SQLite in the data directory)
   FLAGFALL_SEED_SAMPLE   "true" loads the sample event and demo logins on the first serve (demos only)
+  FLAGFALL_MIGRATE_DURING_EVENT  "true" lets an upgrade change the database while the event runs
   FLAGFALL_S3_BUCKET     store challenge files in an S3-compatible bucket (see docs/dev/config.md)
 `
 
@@ -229,6 +232,20 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		return 0
+	case "migrate":
+		during := len(args) == 2 && args[1] == "--during-event"
+		if len(args) > 2 || (len(args) == 2 && !during) {
+			fmt.Fprintln(stderr, "usage: flagfall migrate [--during-event]")
+			return 2
+		}
+		_, db, _, err := setupWith(context.Background(), during)
+		if err != nil {
+			fmt.Fprintln(stderr, "error:", err)
+			return 1
+		}
+		db.Close()
+		fmt.Fprintln(stdout, "The database is up to date.")
+		return 0
 	case "challenges":
 		return challengesCmd(args[1:], stdout, stderr)
 	case "healthcheck":
@@ -347,6 +364,12 @@ func serve(logOut io.Writer) error {
 // file store (checked, so a wrong bucket fails here, not on the first
 // download).
 func setup(ctx context.Context) (config.Config, *store.Store, *blobs.Store, error) {
+	return setupWith(ctx, false)
+}
+
+// setupWith is setup; duringEvent lets an upgrade migrate mid-event (as
+// FLAGFALL_MIGRATE_DURING_EVENT does).
+func setupWith(ctx context.Context, duringEvent bool) (config.Config, *store.Store, *blobs.Store, error) {
 	cfg, err := config.Load(os.LookupEnv)
 	if err != nil {
 		return cfg, nil, nil, err
@@ -365,7 +388,8 @@ func setup(ctx context.Context) (config.Config, *store.Store, *blobs.Store, erro
 	if err != nil {
 		return cfg, nil, nil, err
 	}
-	if err := db.Migrate(ctx); err != nil {
+	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	if err := upgrade(ctx, db, files, cfg.DataDir, duringEvent || cfg.MigrateDuringEvent, time.Now(), log); err != nil {
 		db.Close()
 		return cfg, nil, nil, err
 	}

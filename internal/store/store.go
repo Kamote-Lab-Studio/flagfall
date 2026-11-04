@@ -101,10 +101,39 @@ func openSQLite(path string) (*Store, error) {
 func (s *Store) Close() error { return s.DB.Close() }
 
 // Migrate brings the schema up to date. It is safe to call on every start.
-func (s *Store) Migrate(ctx context.Context) error {
-	fsys, err := expandMigrations(migrations.FS, s.Dialect)
+func (s *Store) Migrate(ctx context.Context) error { return s.MigrateTo(ctx, 0) }
+
+// MigrateTo applies migrations up to version, or all of them when version is 0.
+func (s *Store) MigrateTo(ctx context.Context, version int64) error {
+	p, err := s.migrations()
 	if err != nil {
 		return err
+	}
+	if version == 0 {
+		_, err = p.Up(ctx)
+	} else {
+		_, err = p.UpTo(ctx, version)
+	}
+	if err != nil {
+		return fmt.Errorf("run migrations: %w", err)
+	}
+	return nil
+}
+
+// SchemaVersions returns the schema version the database is at (0 for a new
+// one) and the newest version this build knows.
+func (s *Store) SchemaVersions(ctx context.Context) (current, target int64, err error) {
+	p, err := s.migrations()
+	if err != nil {
+		return 0, 0, err
+	}
+	return p.GetVersions(ctx)
+}
+
+func (s *Store) migrations() (*goose.Provider, error) {
+	fsys, err := expandMigrations(migrations.FS, s.Dialect)
+	if err != nil {
+		return nil, err
 	}
 	dialect := goose.DialectSQLite3
 	if s.Dialect == Postgres {
@@ -112,12 +141,9 @@ func (s *Store) Migrate(ctx context.Context) error {
 	}
 	p, err := goose.NewProvider(dialect, s.DB.DB, fsys)
 	if err != nil {
-		return fmt.Errorf("load migrations: %w", err)
+		return nil, fmt.Errorf("load migrations: %w", err)
 	}
-	if _, err := p.Up(ctx); err != nil {
-		return fmt.Errorf("run migrations: %w", err)
-	}
-	return nil
+	return p, nil
 }
 
 // expandMigrations replaces the dialect tokens in every migration file.

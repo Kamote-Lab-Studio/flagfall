@@ -57,7 +57,9 @@ func tbl[T any](name string, hasID bool) table {
 		name: name, hasID: hasID,
 		dump: func(ctx context.Context, db bun.IDB, w io.Writer) (int, error) {
 			var rows []T
-			if err := db.NewSelect().Model(&rows).Scan(ctx); err != nil {
+			// SELECT *, not the model's column list: the backup taken before an
+			// upgrade reads the old schema, which lacks the columns new code adds.
+			if err := db.NewSelect().Model(&rows).ColumnExpr("*").Scan(ctx); err != nil {
 				return 0, fmt.Errorf("read %s: %w", name, err)
 			}
 			enc := json.NewEncoder(w)

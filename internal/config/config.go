@@ -34,6 +34,9 @@ type Config struct {
 	// TrustProxy reads the client IP from X-Forwarded-For. Only set this
 	// behind a reverse proxy (Caddy, nginx, a load balancer).
 	TrustProxy bool `toml:"trust_proxy"`
+	// MigrateDuringEvent lets an upgrade change the database while the event
+	// is running. Off by default: the server refuses to start instead.
+	MigrateDuringEvent bool `toml:"migrate_during_event"`
 	// S3 stores challenge files in a bucket instead of DataDir/files.
 	S3 S3Config `toml:"s3"`
 	// Services runs challenge containers (`service:` in challenge.yml).
@@ -89,6 +92,7 @@ func Load(lookup LookupFunc) (Config, error) {
 		}
 	}
 	flag("FLAGFALL_TRUST_PROXY", &cfg.TrustProxy)
+	flag("FLAGFALL_MIGRATE_DURING_EVENT", &cfg.MigrateDuringEvent)
 	env("FLAGFALL_S3_BUCKET", &cfg.S3.Bucket)
 	env("FLAGFALL_S3_ENDPOINT", &cfg.S3.Endpoint)
 	env("FLAGFALL_S3_REGION", &cfg.S3.Region)
