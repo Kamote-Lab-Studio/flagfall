@@ -30,7 +30,7 @@ export interface Challenge extends ChallengeSummary {
 
 export interface User {
   id: string; name: string; email: string; role: Role; country: string | null;
-  teamId: string | null; teamName: string | null; verified: boolean; banned: boolean;
+  teamId: string | null; teamName: string | null; verified: boolean; banned: boolean; twoFactor: boolean;
   createdAt: string; lastSeenAt: string | null;
 }
 export interface Team {

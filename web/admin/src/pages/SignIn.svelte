@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, message } from "../lib/api";
+  import { api, ApiError, message } from "../lib/api";
 
   let { onDone, demo = null }: { onDone: () => void; demo?: { email: string; password: string } | null } = $props();
 
@@ -7,15 +7,38 @@
   let password = $state("");
   let error = $state("");
   let busy = $state(false);
+  // Two-factor accounts: the ticket from the password step, and the code.
+  let ticket = $state("");
+  let code = $state("");
 
   async function submit(ev: SubmitEvent) {
     ev.preventDefault();
     busy = true;
     error = "";
     try {
-      await api.signIn(email, password);
+      const r = await api.signIn(email, password);
+      if (r?.twoFactorRequired && r.ticket) {
+        ticket = r.ticket;
+        code = "";
+        return;
+      }
       onDone();
     } catch (err) {
+      error = message(err);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function submitCode(ev: SubmitEvent) {
+    ev.preventDefault();
+    busy = true;
+    error = "";
+    try {
+      await api.signInWithCode(ticket, code);
+      onDone();
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "ticket_expired") ticket = "";
       error = message(err);
     } finally {
       busy = false;
@@ -45,6 +68,22 @@
     </section>
   {/if}
 
+  {#if ticket}
+  <form class="card" onsubmit={submitCode}>
+    <h2>Two-factor sign-in</h2>
+    <p class="muted">Enter the 6-digit code from your authenticator app, or one of your recovery codes.</p>
+    <label>
+      <span>Code</span>
+      <input class="mono" bind:value={code} autocomplete="one-time-code" spellcheck="false" required />
+    </label>
+    {#if error}<p class="field-error" role="alert">{error}</p>{/if}
+    <div class="actions">
+      <button class="primary" disabled={busy}>Sign in</button>
+      <span class="spacer"></span>
+      <button type="button" class="link" onclick={() => ((ticket = ""), (error = ""))}>Back</button>
+    </div>
+  </form>
+  {:else}
   <form class="card" onsubmit={submit}>
     <label>
       <span>Email</span>
@@ -61,6 +100,7 @@
       <a href="/forgot-password">Forgot your password?</a>
     </div>
   </form>
+  {/if}
   <p class="muted"><a href="/">← Back to the event</a></p>
 </main>
 

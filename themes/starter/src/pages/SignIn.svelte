@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isError } from "@flagfall/theme-sdk";
   import { app, errorText, ff, navigate, refreshMe, route } from "../lib/app.svelte";
 
   let { params: _ }: { params: Record<string, string> } = $props();
@@ -9,6 +10,9 @@
   let busy = $state(false);
   let forgot = $state(false);
   let sent = $state(false);
+  // Two-factor accounts: the ticket from the password step, and the code.
+  let ticket = $state("");
+  let code = $state("");
 
   // Only same-site paths, so ?next= can't send players elsewhere.
   function next(): string {
@@ -22,18 +26,39 @@
     error = "";
     try {
       await ff.auth.signIn({ email, password });
-      // The demo organizer goes to the admin panel (a different app).
-      if (app.event?.demoAdmin && email.toLowerCase() === app.event.demoAdmin.email.toLowerCase()) {
-        location.assign("/admin");
-        return;
-      }
-      await refreshMe();
-      navigate(next());
+      await signedIn();
     } catch (err) {
+      if (isError(err, "two_factor_required") && err.ticket) ticket = err.ticket;
+      else error = errorText(err);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function signInWithCode(ev: SubmitEvent) {
+    ev.preventDefault();
+    busy = true;
+    error = "";
+    try {
+      await ff.auth.signInWithCode({ ticket, code });
+      await signedIn();
+    } catch (err) {
+      if (isError(err, "ticket_expired")) ticket = "";
       error = errorText(err);
     } finally {
       busy = false;
     }
+  }
+
+  // After either sign-in step: go on to where the player was headed.
+  async function signedIn() {
+    // The demo organizer goes to the admin panel (a different app).
+    if (app.event?.demoAdmin && email.toLowerCase() === app.event.demoAdmin.email.toLowerCase()) {
+      location.assign("/admin");
+      return;
+    }
+    await refreshMe();
+    navigate(next());
   }
 
   async function reset(ev: SubmitEvent) {
@@ -55,7 +80,15 @@
   }
 </script>
 
-{#if forgot}
+{#if ticket}
+  <h1>Two-factor sign-in</h1>
+  <form onsubmit={signInWithCode}>
+    <label>Code from your authenticator app, or a recovery code <input autocomplete="one-time-code" spellcheck="false" required bind:value={code} /></label>
+    {#if error}<p class="error" role="alert">{error}</p>{/if}
+    <button disabled={busy}>Sign in</button>
+  </form>
+  <p><button type="button" class="link" onclick={() => ((ticket = ""), (error = ""))}>Back</button></p>
+{:else if forgot}
   <h1>Reset your password</h1>
   {#if sent}
     <p role="status">If an account uses that email, a reset link is on its way.</p>

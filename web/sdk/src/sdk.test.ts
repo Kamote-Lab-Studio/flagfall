@@ -44,6 +44,20 @@ describe("client", () => {
     expect(isError(err, "forbidden")).toBe(false);
   });
 
+  it("turns a two-factor sign-in into an error with a ticket", async () => {
+    const me = { id: "1", name: "ada" };
+    const { fn, calls } = fakeFetch({
+      "POST /api/v1/auth/sign-in": { body: { twoFactorRequired: true, ticket: "t-1" } },
+      "POST /api/v1/auth/sign-in/code": { body: me },
+    });
+    const ff = createClient({ fetch: fn });
+    const err = await ff.auth.signIn({ email: "a", password: "b" }).catch((e) => e);
+    expect(isError(err, "two_factor_required")).toBe(true);
+    expect(err.ticket).toBe("t-1");
+    expect(await ff.auth.signInWithCode({ ticket: err.ticket, code: "123456" })).toEqual(me);
+    expect(calls[1]!.init.body).toBe(JSON.stringify({ ticket: "t-1", code: "123456" }));
+  });
+
   it("handles 204 and builds query strings", async () => {
     const { fn, calls } = fakeFetch({
       "POST /api/v1/auth/sign-out": { status: 204 },

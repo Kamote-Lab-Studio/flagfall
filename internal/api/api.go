@@ -150,6 +150,7 @@ func (a *API) Mount(r chi.Router) {
 
 		r.Post("/auth/sign-up", a.h(a.signUp))
 		r.Post("/auth/sign-in", a.h(a.signIn))
+		r.Post("/auth/sign-in/code", a.h(a.signInCode))
 		r.Post("/auth/sign-out", a.h(a.signOut))
 		r.Post("/auth/password-reset", a.h(a.requestPasswordReset))
 		r.Post("/auth/password-reset/confirm", a.h(a.confirmPasswordReset))
@@ -157,6 +158,11 @@ func (a *API) Mount(r chi.Router) {
 		r.Get("/me", a.h(a.getMe))
 		r.Patch("/me", a.h(a.player(a.updateMe)))
 		r.Post("/me/password", a.h(a.player(a.changePassword)))
+		r.Get("/me/two-factor", a.h(a.player(a.getTwoFactor)))
+		r.Post("/me/two-factor/setup", a.h(a.player(a.setupTwoFactor)))
+		r.Post("/me/two-factor/enable", a.h(a.player(a.enableTwoFactor)))
+		r.Post("/me/two-factor/disable", a.h(a.player(a.disableTwoFactor)))
+		r.Post("/me/two-factor/recovery-codes", a.h(a.player(a.regenerateRecoveryCodes)))
 
 		r.Get("/teams", a.h(a.listTeams))
 		r.Post("/teams", a.h(a.player(a.createTeam)))

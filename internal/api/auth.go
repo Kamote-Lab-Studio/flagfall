@@ -100,6 +100,11 @@ func (a *API) signIn(w http.ResponseWriter, r *http.Request) error {
 	if user.BannedAt != nil {
 		return errForbidden("This account is suspended. Contact the organizers.")
 	}
+	// Two-factor accounts get a ticket to trade, with a code, for the session.
+	if user.TOTPSecret != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"twoFactorRequired": true, "ticket": a.twoFactorTicket(user, a.now())})
+		return nil
+	}
 	a.limitSignIn.Reset(acctKey)
 	if err := a.startSession(ctx, w, r, user); err != nil {
 		return err

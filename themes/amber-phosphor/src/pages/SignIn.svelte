@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isError } from "@flagfall/theme-sdk";
   import { app, ff, refreshMe, setting, t } from "../lib/state.svelte";
   import { navigate, route } from "../lib/router.svelte";
   import { errorMessage } from "../lib/util";
@@ -10,6 +11,9 @@
   let error = $state("");
   let forgot = $state(false);
   let sent = $state(false);
+  // Two-factor accounts: the ticket from the password step, and the code.
+  let ticket = $state("");
+  let code = $state("");
 
   function next(): string {
     const n = route.query.get("next") ?? "/";
@@ -26,18 +30,43 @@
     error = "";
     try {
       await ff.auth.signIn({ email, password });
-      const admin = destination();
-      if (admin) {
-        location.assign(admin); // a different app, so a full page load
-        return;
-      }
-      await refreshMe();
-      navigate(next(), { replace: true });
+      await signedIn();
     } catch (err) {
+      if (isError(err, "two_factor_required") && err.ticket) {
+        ticket = err.ticket;
+        code = "";
+      } else {
+        error = errorMessage(err, t);
+      }
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function signInWithCode(ev: SubmitEvent) {
+    ev.preventDefault();
+    busy = true;
+    error = "";
+    try {
+      await ff.auth.signInWithCode({ ticket, code });
+      await signedIn();
+    } catch (err) {
+      if (isError(err, "ticket_expired")) ticket = "";
       error = errorMessage(err, t);
     } finally {
       busy = false;
     }
+  }
+
+  // After either sign-in step: go on to where the player was headed.
+  async function signedIn() {
+    const admin = destination();
+    if (admin) {
+      location.assign(admin); // a different app, so a full page load
+      return;
+    }
+    await refreshMe();
+    navigate(next(), { replace: true });
   }
 
   // Demo installs offer two public logins: a team captain for the player
@@ -94,7 +123,16 @@ connected to {app.event?.name ?? "flagfall"}
   </section>
 
   <section class="split-right">
-    {#if forgot}
+    {#if ticket}
+      <form class="form-card" onsubmit={signInWithCode}>
+        <h1>Two-factor sign-in</h1>
+        <p class="muted">Enter the 6-digit code from your authenticator app, or one of your recovery codes.</p>
+        <div class="field"><label for="code">Code</label><input id="code" class="mono" autocomplete="one-time-code" inputmode="text" spellcheck="false" required bind:value={code} /></div>
+        {#if error}<p class="status-msg bad" role="alert">{error}</p>{/if}
+        <button class="btn" type="submit" disabled={busy}>Sign in</button>
+        <div class="form-foot"><button type="button" class="link" onclick={() => ((ticket = ""), (error = ""))}>Back</button></div>
+      </form>
+    {:else if forgot}
       <form class="form-card" onsubmit={reset}>
         <h1>Reset password</h1>
         {#if sent}

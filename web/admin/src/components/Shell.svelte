@@ -10,6 +10,7 @@
   import Announcements from "../pages/Announcements.svelte";
   import Scoreboard from "../pages/Scoreboard.svelte";
   import Submissions from "../pages/Submissions.svelte";
+  import Account from "../pages/Account.svelte";
   import Pages from "../pages/Pages.svelte";
   import Audit from "../pages/Audit.svelte";
   import Data from "../pages/Data.svelte";
@@ -64,6 +65,7 @@
     <div class="side-foot">
       <a href="/" class="link" target="_blank" rel="noopener">View player site</a>
       <span class="muted">Signed in as {session.me?.name}, {session.me?.role}</span>
+      <a href={href("/account")} class="link" aria-current={route.path === "/account" ? "page" : undefined}>Account security</a>
       <button class="small" onclick={onSignOut}>Sign out</button>
     </div>
   </aside>
@@ -93,6 +95,8 @@
         <Appearance />
       {:else if route.path === "/settings" && can("owner")}
         <Settings />
+      {:else if route.path === "/account"}
+        <Account />
       {:else if route.path === "/data" && can("admin")}
         <Data />
       {:else if route.path === "/audit" && can("admin")}

@@ -57,16 +57,22 @@ type Team struct {
 type User struct {
 	bun.BaseModel `bun:"table:users"`
 
-	ID           int64      `bun:"id,pk,autoincrement"`
-	Name         string     `bun:"name"`
-	NameKey      string     `bun:"name_key"`
-	Email        string     `bun:"email"`
-	EmailKey     string     `bun:"email_key"`
-	PasswordHash string     `bun:"password_hash"`
-	Role         string     `bun:"role"`
-	TeamID       *int64     `bun:"team_id"`
-	Country      *string    `bun:"country"`
-	TOTPSecret   *string    `bun:"totp_secret"`
+	ID           int64   `bun:"id,pk,autoincrement"`
+	Name         string  `bun:"name"`
+	NameKey      string  `bun:"name_key"`
+	Email        string  `bun:"email"`
+	EmailKey     string  `bun:"email_key"`
+	PasswordHash string  `bun:"password_hash"`
+	Role         string  `bun:"role"`
+	TeamID       *int64  `bun:"team_id"`
+	Country      *string `bun:"country"`
+	TOTPSecret   *string `bun:"totp_secret"`
+	// TOTPPending is a sealed secret during two-factor setup.
+	TOTPPending *string `bun:"totp_pending"`
+	// TOTPLastStep is the last TOTP step used; older codes are refused.
+	TOTPLastStep int64 `bun:"totp_last_step"`
+	// TOTPRecovery is a JSON array of hashed one-time recovery codes.
+	TOTPRecovery string     `bun:"totp_recovery"`
 	VerifiedAt   *time.Time `bun:"verified_at"`
 	BannedAt     *time.Time `bun:"banned_at"`
 	CreatedAt    time.Time  `bun:"created_at"`

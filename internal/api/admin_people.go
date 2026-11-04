@@ -20,6 +20,7 @@ func (a *API) mountAdminPeople(r chi.Router) {
 	r.Get("/users/{id}", a.h(a.staff("support", a.adminGetUser)))
 	r.Patch("/users/{id}", a.h(a.staff("support", a.adminPatchUser)))
 	r.Post("/users/{id}/password-reset", a.h(a.staff("support", a.adminResetPassword)))
+	r.Delete("/users/{id}/two-factor", a.h(a.staff("admin", a.adminResetTwoFactor)))
 	r.Get("/staff", a.h(a.staff("support", a.adminListStaff)))
 
 	r.Get("/teams", a.h(a.staff("support", a.adminListTeams)))
@@ -52,6 +53,7 @@ type adminUserView struct {
 	TeamName  *string    `json:"teamName"`
 	Verified  bool       `json:"verified"`
 	Banned    bool       `json:"banned"`
+	TwoFactor bool       `json:"twoFactor"`
 	CreatedAt time.Time  `json:"createdAt"`
 	LastSeen  *time.Time `json:"lastSeenAt"`
 }
@@ -65,7 +67,7 @@ type userRow struct {
 func (u *userRow) view() adminUserView {
 	v := adminUserView{
 		ID: idStr(u.ID), Name: u.Name, Email: u.Email, Role: u.Role, Country: u.Country, TeamName: u.TeamName,
-		Verified: u.VerifiedAt != nil, Banned: u.BannedAt != nil, CreatedAt: u.CreatedAt.UTC(), LastSeen: utcPtr(u.LastSeen),
+		Verified: u.VerifiedAt != nil, Banned: u.BannedAt != nil, TwoFactor: u.TOTPSecret != nil, CreatedAt: u.CreatedAt.UTC(), LastSeen: utcPtr(u.LastSeen),
 	}
 	if u.TeamID != nil {
 		t := idStr(*u.TeamID)
@@ -297,6 +299,30 @@ func (a *API) adminResetPassword(w http.ResponseWriter, r *http.Request) error {
 	}
 	writeJSON(w, http.StatusOK, out)
 	return nil
+}
+
+// DELETE /users/{id}/two-factor: turns two-factor off for someone who lost
+// their device. They sign in with the password alone and can set it up again.
+func (a *API) adminResetTwoFactor(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
+	id, err := pathID(r, "id")
+	if err != nil {
+		return err
+	}
+	u := new(store.User)
+	if err := a.store.DB.NewSelect().Model(u).Where("id = ?", id).Scan(ctx); err != nil {
+		return err
+	}
+	if u.ID == currentUser(r).ID {
+		return errForbidden("Turn your own two-factor off from your account page.")
+	}
+	if !canManage(currentUser(r), u) {
+		return errForbidden("You can only reset accounts with a lower role than yours.")
+	}
+	if err := a.clearTwoFactor(ctx, u.ID); err != nil {
+		return err
+	}
+	return noContent(w)
 }
 
 // ---------------------------------------------------------------- teams

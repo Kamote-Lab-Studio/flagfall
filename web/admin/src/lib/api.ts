@@ -51,7 +51,15 @@ export const api = {
     fd.append(field, file);
     return request<T>("POST", ADMIN + path, fd);
   },
-  signIn: (email: string, password: string) => request<unknown>("POST", "/api/v1/auth/sign-in", { email, password }),
+  /** Resolves to { twoFactorRequired, ticket } for two-factor accounts. */
+  signIn: (email: string, password: string) =>
+    request<{ twoFactorRequired?: boolean; ticket?: string } | null>("POST", "/api/v1/auth/sign-in", { email, password }),
+  signInWithCode: (ticket: string, code: string) => request<unknown>("POST", "/api/v1/auth/sign-in/code", { ticket, code }),
+  /** The player API's /me endpoints (the signed-in staff member's own account). */
+  me: {
+    get: <T>(path: string) => request<T>("GET", "/api/v1/me" + path),
+    post: <T>(path: string, body?: unknown) => request<T>("POST", "/api/v1/me" + path, body ?? {}),
+  },
   signOut: () => request<void>("POST", "/api/v1/auth/sign-out", {}),
 };
 

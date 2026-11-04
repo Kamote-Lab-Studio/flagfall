@@ -63,7 +63,14 @@ export interface Flagfall {
   auth: {
     /** Null when signed out. */
     me(): Promise<Me | null>;
+    /**
+     * For an account with two-factor sign-in, this throws a FlagfallError with
+     * code "two_factor_required" and a `ticket`: ask for the code from the
+     * player's authenticator app (or a recovery code), then call signInWithCode.
+     */
     signIn(input: { email: string; password: string }): Promise<Me>;
+    /** The second step of signIn for two-factor accounts. */
+    signInWithCode(input: { ticket: string; code: string }): Promise<Me>;
     signUp(input: { name: string; email: string; password: string; country?: string }): Promise<Me>;
     signOut(): Promise<void>;
     requestPasswordReset(email: string): Promise<void>;
@@ -166,13 +173,16 @@ export class FlagfallError extends Error {
   readonly code: ErrorCode;
   readonly status: number;
   readonly fields: Record<string, string>;
+  /** With code "two_factor_required": pass it to auth.signInWithCode. */
+  readonly ticket?: string;
 
-  constructor(status: number, body: ApiErrorBody | null) {
+  constructor(status: number, body: ApiErrorBody | null, ticket?: string) {
     super(body?.error.message ?? `Request failed (${status})`);
     this.name = "FlagfallError";
     this.status = status;
     this.code = body?.error.code ?? (status >= 500 ? "internal" : "validation");
     this.fields = body?.error.fields ?? {};
+    if (ticket) this.ticket = ticket;
   }
 }
 
@@ -218,7 +228,15 @@ export function createClient(options: ClientOptions = {}): Flagfall {
 
     auth: {
       me: () => get<Me | null>("/me"),
-      signIn: (input) => post<Me>("/auth/sign-in", input),
+      signIn: async (input) => {
+        const r = await post<Me | { twoFactorRequired: true; ticket: string }>("/auth/sign-in", input);
+        if (r && "twoFactorRequired" in r) {
+          const message = "This account uses two-factor sign-in. Enter the code from your authenticator app.";
+          throw new FlagfallError(401, { error: { code: "two_factor_required", message } }, r.ticket);
+        }
+        return r;
+      },
+      signInWithCode: (input) => post<Me>("/auth/sign-in/code", input),
       signUp: (input) => post<Me>("/auth/sign-up", input),
       signOut: () => post<void>("/auth/sign-out"),
       requestPasswordReset: (email) => post<void>("/auth/password-reset", { email }),

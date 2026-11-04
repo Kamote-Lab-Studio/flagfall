@@ -225,6 +225,10 @@ export type ErrorCode =
   | "event_not_running"
   | "registration_closed"
   | "team_full"
+  /** signIn: the account uses two-factor sign-in; finish with auth.signInWithCode. */
+  | "two_factor_required"
+  /** signInWithCode: the ticket is too old (5 minutes); sign in again. */
+  | "ticket_expired"
   | "internal";
 
 export interface ApiErrorBody {

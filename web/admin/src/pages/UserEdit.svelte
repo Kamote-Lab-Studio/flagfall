@@ -61,6 +61,17 @@
     }
   }
 
+  async function resetTwoFactor() {
+    if (!u || !confirm(`Turn off two-factor sign-in for ${u.name}? They'll sign in with their password alone until they set it up again.`)) return;
+    try {
+      await api.del(`/users/${id}/two-factor`);
+      notify("Two-factor sign-in is off for this account.");
+      await load();
+    } catch (err) {
+      notify(message(err), "error");
+    }
+  }
+
   onMount(load);
 </script>
 
@@ -100,7 +111,9 @@
     <div class="actions">
       <button class="primary grow" disabled={busy}>Save user</button>
       <button type="button" onclick={reset}>Send password reset</button>
+      {#if u.twoFactor && can("admin")}<button type="button" onclick={resetTwoFactor}>Reset two-factor</button>{/if}
     </div>
+    {#if u.twoFactor}<p class="muted small">Uses two-factor sign-in.</p>{/if}
     {#if resetLink}
       <div class="notice stack-s">
         <p>No email server is set up, so pass this link on yourself. It works for one hour.</p>
