@@ -28,7 +28,7 @@
 {#if !enabled}
   <p class="notice">
     Challenge containers are off. To let Flagfall start the {services.length === 1 ? "service" : `${services.length} services`} below, set
-    <code>FLAGFALL_DOCKER_HOST</code> (see <code>docs/dev/challenge-services.md</code>).
+    <code>FLAGFALL_DOCKER_HOST</code> (see <code>docs/challenge-services.md</code>).
   </p>
 {/if}
 <table>

@@ -6,7 +6,7 @@ or PostgreSQL for bigger events.
 
 ## How big a server
 
-Measured with the [load test](../loadtest/README.md):
+Measured with a load test of simulated players:
 
 | Event | Server | Database |
 | --- | --- | --- |
@@ -42,12 +42,12 @@ with the development `compose.yaml` at the repository root.
   key and uploads in `flagfall-data`. Back up both, or use **Data → Backup**
   in the admin panel. Losing `flagfall-data` loses the secret key, which
   signs sessions and hashes flags.
-- **Upgrades:** set `FLAGFALL_IMAGE` to a release tag (for example
-  `ghcr.io/kamote-lab-studio/flagfall:1.0.0`), then `docker compose pull && docker compose up -d`.
+- **Upgrades:** build the new version (`docker build -t flagfall:local ..` from an
+  updated checkout, with `FLAGFALL_IMAGE=flagfall:local` in `.env`), then `docker compose up -d`.
   A version that changes the database backs it up to `/data/backups` first,
   and won't start while the event is running unless you confirm it
   (`docker compose run --rm flagfall migrate --during-event`). See
-  [docs/dev/config.md](../docs/dev/config.md#upgrades).
+  [docs/config.md](../docs/config.md#upgrades).
 - **Certificate notices:** add `email you@example.org` in a global block at
   the top of the `Caddyfile`.
 - Flagfall isn't published on a port; Caddy is the only way in, which is why
@@ -55,24 +55,28 @@ with the development `compose.yaml` at the repository root.
 
 ## One container
 
+No images are published yet, so build one from the repository root:
+
+    docker build -t flagfall .
     docker run -d -p 8080:8080 -v flagfall-data:/data \
       -e FLAGFALL_PUBLIC_URL=https://ctf.example.org \
-      ghcr.io/kamote-lab-studio/flagfall:latest
+      flagfall
 
 This uses SQLite in `/data`. Put a TLS proxy in front, and set
 `FLAGFALL_TRUST_PROXY=true` only when that proxy is the sole way in.
-Images are published for `linux/amd64` and `linux/arm64` and signed with
-cosign (keyless).
+To build for both `linux/amd64` and `linux/arm64`:
 
-## A release binary
+    docker buildx build --platform linux/amd64,linux/arm64 -t flagfall .
 
-Download the archive for your system from the GitHub release, check it
-against `checksums.txt` (signed: `checksums.txt.sigstore.json`), and run:
+## A binary
 
-    FLAGFALL_PUBLIC_URL=https://ctf.example.org ./flagfall serve
+Build it from source (Go 1.26+, Node 22+, pnpm 9):
 
-Binaries are built for Linux, macOS and Windows on amd64 and arm64, each
-with an SPDX SBOM.
+    pnpm install && make build     # or: pnpm -r build, then go build -o bin/flagfall ./cmd/flagfall
+    FLAGFALL_PUBLIC_URL=https://ctf.example.org ./bin/flagfall serve
+
+`.goreleaser.yaml` builds binaries for Linux, macOS and Windows on amd64
+and arm64: `goreleaser release --snapshot --clean`.
 
 ## Local development (Docker)
 
@@ -86,20 +90,6 @@ port is bound to 127.0.0.1 only. `FLAGFALL_SEED_SAMPLE` defaults to `true`
 there, so the first start loads the sample event and its demo logins.
 Mailpit catches every email at http://localhost:8026: in the admin panel's
 Settings, use mail server `mailpit`, port `1025`, security "None".
-
-## Releasing (maintainers)
-
-Push a tag like `v1.0.0`. `.github/workflows/release.yml` then:
-
-- builds the six binaries with GoReleaser (`.goreleaser.yaml`), with
-  checksums, SBOMs and a keyless cosign signature, into a **draft** release;
-- builds and pushes the multi-arch image to `ghcr.io/kamote-lab-studio/flagfall`
-  (`1.0.0`, `1.0` and `latest`; tags with a `-`, like `v1.0.0-rc.1`, don't
-  move `latest`) and signs it.
-
-To build the image for both architectures locally:
-
-    docker buildx build --platform linux/amd64,linux/arm64 -t flagfall .
 
 ## Still to come
 

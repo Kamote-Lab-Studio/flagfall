@@ -1,6 +1,5 @@
 # Release binaries for six targets, with checksums, SBOMs and keyless
-# signatures. Run by .github/workflows/release.yml when a v* tag is pushed;
-# try it locally with `goreleaser release --snapshot --clean`.
+# signatures. Run it locally with `goreleaser release --snapshot --clean`.
 version: 2
 
 project_name: flagfall

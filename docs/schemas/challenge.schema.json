@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flagfall.dev/schemas/challenge.schema.json",
+  "title": "Flagfall challenge (challenge.yml)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["slug", "name", "category", "description", "flags"],
+  "oneOf": [
+    { "required": ["value"], "not": { "required": ["scoring"] } },
+    { "required": ["scoring"], "not": { "required": ["value"] } }
+  ],
+  "properties": {
+    "format": { "description": "challenge.yml format version.", "const": 1, "default": 1 },
+    "slug": {
+      "description": "Stable id used for import updates and URLs. Never change it after an event starts.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "category": { "type": "string", "minLength": 1, "maxLength": 32 },
+    "difficulty": { "enum": ["Easy", "Medium", "Hard", "Insane", "easy", "medium", "hard", "insane"] },
+    "author": { "type": "string" },
+    "description": {
+      "description": "Path to a Markdown file in the challenge folder, or inline Markdown.",
+      "type": "string",
+      "minLength": 1
+    },
+    "value": { "description": "Static score.", "type": "integer", "minimum": 0 },
+    "scoring": {
+      "description": "Dynamic score: starts at initial and decays toward minimum as teams solve it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["initial", "minimum", "decay"],
+      "properties": {
+        "initial": { "type": "integer", "minimum": 1 },
+        "minimum": { "type": "integer", "minimum": 0 },
+        "decay": { "description": "Number of solves at which the value reaches minimum.", "type": "integer", "minimum": 1 }
+      }
+    },
+    "flags": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "value"],
+        "properties": {
+          "type": { "enum": ["exact", "case-insensitive", "pattern"] },
+          "value": {
+            "description": "The flag, or a Go RE2 regular expression for type pattern (matched against the whole submission).",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      }
+    },
+    "hints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["content"],
+        "properties": {
+          "cost": { "type": "integer", "minimum": 0, "default": 0 },
+          "content": { "description": "Path to a Markdown file, or inline Markdown.", "type": "string" }
+        }
+      }
+    },
+    "files": {
+      "description": "Paths, relative to the challenge folder, of files players download.",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "connection": {
+      "description": "Shown to players. {{event_domain}} is replaced with the event's domain.",
+      "type": "string"
+    },
+    "service": {
+      "description": "Optional container Flagfall can start as one shared instance for all teams. See docs/challenge-services.md.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "port"],
+      "properties": {
+        "image": { "description": "Image reference, or a path to a Dockerfile in the challenge folder.", "type": "string" },
+        "port": { "description": "Port the service listens on inside the container.", "type": "integer", "minimum": 1, "maximum": 65535 },
+        "publish": { "description": "Host port players connect to. Left out: any free port, shown on the dashboard.", "type": "integer", "minimum": 1, "maximum": 65535 },
+        "env": { "type": "object", "additionalProperties": { "type": "string" } },
+        "cpu": { "description": "CPU limit, e.g. 0.5.", "type": "number", "exclusiveMinimum": 0, "maximum": 4, "default": 0.5 },
+        "memory": { "description": "Memory limit, 16Mi to 8Gi, e.g. 256Mi.", "type": "string", "pattern": "^[0-9]+(Mi|Gi)$", "default": "256Mi" },
+        "healthcheck": { "description": "'tcp' (the port accepts connections) or an HTTP path such as /health (answers below 500).", "type": "string", "default": "tcp" }
+      }
+    },
+    "theme_fields": {
+      "description": "Extra fields for themes that declare them in challengeFields.",
+      "type": "object"
+    },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "visible_from": { "description": "ISO 8601 time; hidden until then.", "type": "string", "format": "date-time" },
+    "state": { "enum": ["visible", "hidden"], "default": "visible" },
+    "requires": {
+      "description": "Slugs that must be solved first (unlock chains). Optional in 1.0.",
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

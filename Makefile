@@ -7,7 +7,7 @@ LDFLAGS := -s -w \
 	-X github.com/Kamote-Lab-Studio/flagfall/internal/version.Version=$(VERSION) \
 	-X github.com/Kamote-Lab-Studio/flagfall/internal/version.Commit=$(COMMIT)
 
-.PHONY: dev build build-go test e2e lint web-install web-build web-lint clean
+.PHONY: dev build build-go test lint web-install web-build web-lint clean
 
 ## dev: run the server locally on :8080
 dev:
@@ -24,10 +24,6 @@ build-go:
 test:
 	go test -race ./...
 	pnpm -r --if-present test
-
-## e2e: run the Playwright end-to-end tests (builds and seeds a throwaway server)
-e2e: web-build
-	pnpm --filter @flagfall/e2e e2e
 
 ## lint: vet Go code, check formatting, typecheck frontend
 lint:

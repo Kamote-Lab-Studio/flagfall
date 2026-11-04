@@ -1,6 +1,6 @@
 # Sample challenge pack
 
-The 12 sample challenges from the designs, as `challenge.yml` folders (see [docs/dev/challenge-format.md](../../docs/dev/challenge-format.md)). Loaded by `flagfall seed sample`. The downloads are real files, and the offline challenges have checked reference solutions.
+The 12 sample challenges from the designs, as `challenge.yml` folders (see [docs/challenge-format.md](../../docs/challenge-format.md)). Loaded by `flagfall seed sample`. The downloads are real files, and the offline challenges have checked reference solutions.
 
 For now the pack starts no containers. The four networked challenges have no `service:` block, so they can't be solved yet.
 
@@ -34,7 +34,7 @@ Commit 7a22a8a has a working service for each networked challenge:
 - the `service:` and `connection:` lines in `challenge.yml`;
 - a `check-solves.sh` that runs the network solves against them.
 
-To restore them, check those files out of that commit and add `*/Dockerfile */service` back to the `//go:embed` line in `embed.go`. Then run the stack with `compose.services.yaml` (see [docs/dev/challenge-services.md](../../docs/dev/challenge-services.md)).
+To restore them, check those files out of that commit and add `*/Dockerfile */service` back to the `//go:embed` line in `embed.go`. Then run the stack with `compose.services.yaml` (see [docs/challenge-services.md](../../docs/challenge-services.md)).
 
 ## Tools
 

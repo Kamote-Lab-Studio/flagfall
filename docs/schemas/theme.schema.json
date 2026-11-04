@@ -1,0 +1,434 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flagfall.dev/schemas/theme.schema.json",
+  "title": "Flagfall theme manifest (theme.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifestVersion",
+    "id",
+    "name",
+    "version",
+    "license",
+    "flagfall",
+    "entry",
+    "pages"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "manifestVersion": {
+      "const": 1
+    },
+    "id": {
+      "description": "Unique, stable id. Lowercase letters, digits and dashes.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,47}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 280
+    },
+    "version": {
+      "description": "Semantic version of the theme.",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$"
+    },
+    "author": {
+      "type": "string"
+    },
+    "license": {
+      "description": "SPDX license id.",
+      "type": "string"
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri"
+    },
+    "flagfall": {
+      "description": "Semver range of Flagfall versions the theme works with, e.g. \">=1.0.0 <2.0.0\".",
+      "type": "string"
+    },
+    "entry": {
+      "description": "HTML file, relative to the package root, that the server sends for every player route.",
+      "type": "string",
+      "default": "dist/index.html"
+    },
+    "adminStyle": {
+      "description": "Optional stylesheet, inside the entry's folder, that restyles the admin panel while this theme is active. It should only override the admin's CSS tokens and element styles.",
+      "type": "string",
+      "pattern": "\\.css$",
+      "examples": ["dist/admin.css"]
+    },
+    "screenshots": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "alt"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "alt": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "pages": {
+      "description": "Routes the theme implements, mapped to their URL paths. Every required page must be present.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "board",
+        "challenge",
+        "scoreboard",
+        "teams",
+        "team",
+        "page",
+        "signIn",
+        "signUp",
+        "account",
+        "announcements",
+        "notStarted",
+        "over"
+      ],
+      "properties": {
+        "board": {
+          "$ref": "#/$defs/route"
+        },
+        "challenge": {
+          "$ref": "#/$defs/route"
+        },
+        "scoreboard": {
+          "$ref": "#/$defs/route"
+        },
+        "teams": {
+          "$ref": "#/$defs/route"
+        },
+        "team": {
+          "$ref": "#/$defs/route"
+        },
+        "page": {
+          "$ref": "#/$defs/route"
+        },
+        "signIn": {
+          "$ref": "#/$defs/route"
+        },
+        "signUp": {
+          "$ref": "#/$defs/route"
+        },
+        "account": {
+          "$ref": "#/$defs/route"
+        },
+        "announcements": {
+          "$ref": "#/$defs/route"
+        },
+        "notStarted": {
+          "$ref": "#/$defs/route"
+        },
+        "over": {
+          "$ref": "#/$defs/route"
+        },
+        "resetPassword": {
+          "$ref": "#/$defs/route"
+        }
+      }
+    },
+    "settings": {
+      "description": "Settings organizers can change in the admin panel. The admin form is generated from this list.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/setting"
+      }
+    },
+    "challengeFields": {
+      "description": "Extra challenge fields this theme uses. Shown in the admin challenge form only while the theme is active; read from challenge.yml theme_fields.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/challengeField"
+      }
+    },
+    "messages": {
+      "description": "Folder of translation files, one <locale>.json per language.",
+      "type": "string",
+      "default": "messages"
+    },
+    "assets": {
+      "description": "Extra origins the theme may load from. Empty by default; organizers see a warning for any entry, because it breaks offline use.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fonts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "route": {
+      "type": "string",
+      "pattern": "^/[A-Za-z0-9/_:.-]*$"
+    },
+    "setting": {
+      "type": "object",
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z][A-Za-z0-9]*$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "help": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "cssVar": {
+          "description": "If set, the value is also exposed as this CSS custom property on :root.",
+          "type": "string",
+          "pattern": "^--[a-z0-9-]+$"
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "type": {
+              "const": "color"
+            },
+            "default": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "contrastWith": {
+              "description": "Key of another color setting; the admin form refuses to save a pair below WCAG AA.",
+              "type": "string"
+            },
+            "minContrast": {
+              "type": "number",
+              "default": 4.5
+            }
+          },
+          "required": [
+            "default"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "text"
+            },
+            "default": {
+              "type": "string"
+            },
+            "maxLength": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000
+            },
+            "multiline": {
+              "type": "boolean"
+            },
+            "markdown": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "default"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "boolean"
+            },
+            "default": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "default"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "number"
+            },
+            "default": {
+              "type": "number"
+            },
+            "min": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            },
+            "step": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "default"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "select"
+            },
+            "default": {
+              "type": "string"
+            },
+            "options": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "type": "object",
+                "required": [
+                  "value",
+                  "label"
+                ],
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "default",
+            "options"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "font"
+            },
+            "default": {
+              "type": "string"
+            },
+            "options": {
+              "description": "Font families bundled with the theme or the platform.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "default",
+            "options"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "image"
+            },
+            "accept": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "image/png",
+                  "image/svg+xml",
+                  "image/webp",
+                  "image/jpeg"
+                ]
+              }
+            },
+            "maxBytes": {
+              "type": "integer",
+              "maximum": 2097152
+            }
+          }
+        }
+      ]
+    },
+    "challengeField": {
+      "type": "object",
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "help": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "type": {
+          "enum": [
+            "text",
+            "number",
+            "boolean",
+            "select",
+            "location"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "value",
+              "label"
+            ],
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

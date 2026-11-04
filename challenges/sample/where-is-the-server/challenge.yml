@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../../docs/dev/schemas/challenge.schema.json
+# yaml-language-server: $schema=../../../docs/schemas/challenge.schema.json
 format: 1
 slug: where-is-the-server
 name: "Where Is the Server?"

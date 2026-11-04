@@ -44,3 +44,9 @@ e2e/playwright-report/
 # The maintainer's private planning notes (kept out of the repository)
 /flagfall-master-plan.md
 /PLAN.md
+# Kept locally, not published: mockups, developer docs, tests, CI, load test
+/design/
+/docs/dev/
+/e2e/
+/loadtest/
+/.github/

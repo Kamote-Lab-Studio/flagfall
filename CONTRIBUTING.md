@@ -28,7 +28,7 @@ Windows: use Git Bash or WSL for `make`, or run the commands in the [Makefile](M
 
 Open a thread in GitHub Discussions (category **Proposals**) before writing code for:
 
-- the player API, SSE events or the Theme SDK's public API (`docs/dev/api.md`, `docs/dev/events.md`, `web/sdk/src/`)
+- the player API, SSE events or the Theme SDK's public API (`web/sdk/src/`)
 - the `theme.json` manifest or `challenge.yml` format
 - the database schema
 - new event formats or new dependencies

@@ -5,7 +5,7 @@ The smallest complete Flagfall theme: every required page, the theme SDK, live u
 ## Layout
 
 ```
-theme.json            manifest: id, pages, settings (docs/dev/theme-manifest.md)
+theme.json            manifest: id, pages, settings (docs/schemas/theme.schema.json)
 embed.go              embeds theme.json and dist/ into the Flagfall binary
 src/main.ts           mounts the app
 src/App.svelte        header, routes, preview banner
@@ -24,11 +24,10 @@ src/app.css           all styles; colors come from settings as CSS variables
    ```sh
    pnpm install
    pnpm --filter @flagfall/theme-<your-id> build
-   go run ./cmd/flagfall                       # publish it under Admin → Appearance
-   pnpm --filter @flagfall/e2e e2e -g "<your-id>"   # the theme test suite
+   go run ./cmd/flagfall serve                 # publish it under Admin → Appearance
    ```
 
-The theme test suite opens every page in `theme.json` on the sample event. A page passes when it loads without script errors, shows an `<h1>`, has no serious accessibility violations (WCAG 2 A and AA, contrast included), and shows keyboard focus.
+Then open every page in `theme.json` on the sample event. Each should load without script errors, show an `<h1>`, pass an accessibility check (WCAG 2 A and AA, contrast included), and show keyboard focus.
 
 ## Things to keep
 

@@ -24,7 +24,6 @@ COPY web/admin/package.json web/admin/
 COPY themes/amber-phosphor/package.json themes/amber-phosphor/
 COPY themes/neon/package.json themes/neon/
 COPY themes/starter/package.json themes/starter/
-COPY e2e/package.json e2e/
 RUN pnpm install --frozen-lockfile \
       --filter "@flagfall/admin..." --filter "@flagfall/theme-*..."
 COPY web/ web/

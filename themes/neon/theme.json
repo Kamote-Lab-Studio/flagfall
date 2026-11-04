@@ -1,5 +1,5 @@
 {
-  "$schema": "../../docs/dev/schemas/theme.schema.json",
+  "$schema": "../../docs/schemas/theme.schema.json",
   "manifestVersion": 1,
   "id": "neon",
   "name": "Neon",

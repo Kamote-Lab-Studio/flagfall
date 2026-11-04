@@ -2,7 +2,7 @@
 
 **A free, self-hosted CTF platform you can run anywhere and re-skin without code.**
 
-> **Status: pre-alpha.** The platform, admin panel and two themes work end to end; packaging and more themes are in progress. Nothing is released yet. The design docs are in [docs/dev](docs/dev).
+> **Status: pre-alpha.** The platform, admin panel and two themes work end to end; packaging and more themes are in progress. Nothing is released yet.
 
 - **Run anywhere.** One binary or one container. SQLite by default, PostgreSQL for big events. Works offline, so it also runs on air-gapped training networks.
 - **Re-skin without code.** Pick a theme in the admin panel, change its colors, logo and wording, preview it on live data, publish.
@@ -37,7 +37,7 @@ Themes change the whole player site, not just its colors, and the admin panel fo
 
 ![The admin dashboard, in Neon colors](docs/images/admin-dashboard.png)
 
-To build your own, copy `themes/starter` and read the [theme manifest](docs/dev/theme-manifest.md) and [SDK](docs/dev/sdk.md) docs.
+To build your own, copy `themes/starter` and follow its README. The SDK's types and comments are in `web/sdk/src`.
 
 ## Known limitations
 
@@ -45,7 +45,7 @@ Flagfall is pre-alpha: try it, break it, and [tell us](https://github.com/Kamote
 
 - **One event per install.** To run another event, start a fresh install and import your challenges (`flagfall challenges export` / `import`).
 - **Two themes** (Amber Phosphor and Neon) of the nine planned for 1.0, plus a bare starter theme for theme authors.
-- **One server.** No Helm chart or multi-replica setup yet. One server handles about 1,000 players with PostgreSQL ([load test](loadtest/README.md)).
+- **One server.** No Helm chart or multi-replica setup yet. One server handles about 1,000 players with PostgreSQL (see [deploy/README.md](deploy/README.md#how-big-a-server)).
 - **English only**, with a partial Filipino translation.
 - **No releases yet**, so the quick start builds the image from source. Database changes between versions are migrated automatically, with a backup first, but there's no upgrade promise before 1.0.
 
@@ -60,7 +60,7 @@ go run ./cmd/flagfall seed sample   # optional: the sample event
 make dev                         # or: go run ./cmd/flagfall serve
 ```
 
-Then open http://localhost:8080. `make test` and `make lint` run everything CI runs. On Windows without `make`, run the `go` and `pnpm` commands from the [Makefile](Makefile) directly. Configuration is in [docs/dev/config.md](docs/dev/config.md).
+Then open http://localhost:8080. `make test` and `make lint` run the tests and checks. On Windows without `make`, run the `go` and `pnpm` commands from the [Makefile](Makefile) directly. Configuration is in [docs/config.md](docs/config.md).
 
 ## Repository layout
 
@@ -74,10 +74,7 @@ Then open http://localhost:8080. `make test` and `make lint` run everything CI r
 | `themes/` | Bundled themes; `themes/starter` is the one to copy |
 | `challenges/sample/` | 12-challenge starter pack |
 | `deploy/` | Production Compose stack with Caddy, and deployment docs |
-| `docs/` | Documentation; `docs/dev/` holds design docs |
-| `design/` | Static design mockups the themes are built from (not shipped) |
-| `e2e/` | Browser tests run against every bundled theme |
-| `loadtest/` | Player simulator and load-test results |
+| `docs/` | Configuration, challenge format and challenge containers |
 
 ## Contributing
 

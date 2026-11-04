@@ -18,7 +18,7 @@ func (a *API) mountAdminServices(r chi.Router) {
 }
 
 // servicesOffMessage explains how to turn challenge containers on.
-const servicesOffMessage = "Challenge containers are off: set FLAGFALL_DOCKER_HOST so Flagfall can reach Docker (see docs/dev/challenge-services.md)."
+const servicesOffMessage = "Challenge containers are off: set FLAGFALL_DOCKER_HOST so Flagfall can reach Docker (see docs/challenge-services.md)."
 
 func (a *API) adminListServices(w http.ResponseWriter, r *http.Request) error {
 	list, err := a.services.List(r.Context())

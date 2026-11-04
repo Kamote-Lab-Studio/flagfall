@@ -53,14 +53,14 @@ Commands:
   version      Print the version and exit
   help         Show this help
 
-Configuration comes from environment variables or flagfall.toml (see docs/dev/config.md):
+Configuration comes from environment variables or flagfall.toml (see docs/config.md):
   FLAGFALL_ADDR        address to listen on (default ":8080")
   FLAGFALL_PUBLIC_URL  public URL players use (default "http://localhost:8080")
   FLAGFALL_DATA_DIR    data directory (default "./data")
   FLAGFALL_DATABASE_URL  database URL (default: SQLite in the data directory)
   FLAGFALL_SEED_SAMPLE   "true" loads the sample event and demo logins on the first serve (demos only)
   FLAGFALL_MIGRATE_DURING_EVENT  "true" lets an upgrade change the database while the event runs
-  FLAGFALL_S3_BUCKET     store challenge files in an S3-compatible bucket (see docs/dev/config.md)
+  FLAGFALL_S3_BUCKET     store challenge files in an S3-compatible bucket (see docs/config.md)
 `
 
 func backupCmd(file string, stdout, stderr io.Writer) error {
