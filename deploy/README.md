@@ -4,6 +4,19 @@ Flagfall is one binary (or one container image) with the themes and admin
 panel built in. It needs a database: SQLite in the data folder by default,
 or PostgreSQL for bigger events.
 
+## How big a server
+
+Measured with the [load test](../loadtest/README.md):
+
+| Event | Server | Database |
+| --- | --- | --- |
+| Up to 100 players | 1 CPU, 1 GB | SQLite (default) |
+| Up to 1,000 players, 300 teams | 2 CPU, 4 GB in total | PostgreSQL, on the same machine |
+
+At 1,000 players the server answered 95% of requests within 6 ms and used
+less than 200 MiB of memory. Twice that many players overloaded the
+database at 0.75 CPU, so for bigger events give PostgreSQL more CPU.
+
 ## A public server with HTTPS (Docker Compose)
 
 `deploy/docker-compose.yml` runs Flagfall, PostgreSQL and

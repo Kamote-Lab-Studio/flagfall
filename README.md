@@ -67,6 +67,7 @@ Then open http://localhost:8080. `make test` and `make lint` run everything CI r
 | `docs/` | Documentation; `docs/dev/` holds design docs |
 | `design/` | Static design mockups the themes are built from (not shipped) |
 | `e2e/` | Browser tests run against every bundled theme |
+| `loadtest/` | Player simulator and load-test results |
 
 ## Contributing
 
