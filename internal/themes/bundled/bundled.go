@@ -9,6 +9,7 @@ import (
 
 	"github.com/flagfall/flagfall/internal/themes"
 	amberphosphor "github.com/flagfall/flagfall/themes/amber-phosphor"
+	"github.com/flagfall/flagfall/themes/neon"
 	"github.com/flagfall/flagfall/themes/starter"
 )
 
@@ -16,6 +17,7 @@ import (
 // comes first.
 var packages = []fs.FS{
 	amberphosphor.FS,
+	neon.FS,
 	starter.FS,
 }
 

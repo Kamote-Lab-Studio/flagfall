@@ -17,6 +17,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY web/sdk/package.json web/sdk/
 COPY web/admin/package.json web/admin/
 COPY themes/amber-phosphor/package.json themes/amber-phosphor/
+COPY themes/neon/package.json themes/neon/
 COPY themes/starter/package.json themes/starter/
 COPY e2e/package.json e2e/
 RUN pnpm install --frozen-lockfile \
@@ -33,6 +34,7 @@ RUN go mod download
 COPY . .
 COPY --from=web /src/web/admin/dist/ web/admin/dist/
 COPY --from=web /src/themes/amber-phosphor/dist/ themes/amber-phosphor/dist/
+COPY --from=web /src/themes/neon/dist/ themes/neon/dist/
 COPY --from=web /src/themes/starter/dist/ themes/starter/dist/
 ARG VERSION=0.0.0-dev
 ARG COMMIT=unknown

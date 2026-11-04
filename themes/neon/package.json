@@ -1,0 +1,27 @@
+{
+  "name": "@flagfall/theme-neon",
+  "version": "1.0.0-dev",
+  "private": true,
+  "description": "Neon: hot pink and neon green on near-black.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+  },
+  "dependencies": {
+    "@flagfall/theme-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@fontsource/barlow": "^5",
+    "@fontsource/jetbrains-mono": "^5",
+    "@fontsource/oxanium": "^5",
+    "@sveltejs/vite-plugin-svelte": "^5",
+    "@tsconfig/svelte": "^5",
+    "svelte": "^5",
+    "svelte-check": "^4",
+    "typescript": "^5.9",
+    "vite": "^6"
+  }
+}

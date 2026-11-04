@@ -1,0 +1,66 @@
+/* Neon for the admin panel: the palette, fonts and neon layer of
+   design/option-b/admin. The server links this after the admin's own
+   stylesheet while the theme is active, then adds the organizer's live
+   settings (--amber, --bg), so customized colors carry over. Only override the
+   admin's tokens and a few element styles here: the admin's layout and class
+   names are its own. */
+@import "@fontsource/oxanium/600.css";
+@import "@fontsource/oxanium/700.css";
+@import "@fontsource/barlow/400.css";
+@import "@fontsource/barlow/500.css";
+@import "@fontsource/barlow/600.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/800.css";
+
+:root {
+  /* Theme settings (cssVar); the server's settings block overrides these. */
+  --amber: #FF2E97;
+  --bg: #07050D;
+
+  /* Admin tokens, mapped to the design's palette. */
+  --deep: #05030A;
+  --panel: #110C1C;
+  --panel-2: #1C1430;
+  --line: #2A1F3D;
+  --line-2: #3A2B55;
+  --row: #1C1430;
+  --text: #EDE7F6;
+  --text-2: #DCD3EA;
+  --muted: #BFB3D6;
+  --dim: #8A7DA3;
+  --green: #39FF88;
+  --violet: #8B3DFF;
+  --accent: var(--amber);
+  --accent-2: #FF8FC8;
+  --accent-ink: var(--bg);
+  --accent-bg: #1E0B18;
+  --accent-line: #5A1A3A;
+  --ok: #39FF88;
+  --ok-bg: #0B1F14;
+  --warn: #FF8FC8;
+  --bad: #FF8A80;
+  --bad-bg: #2A0F14;
+  --bad-line: #5A1A2A;
+  --radius: 2px;
+  --display: "Oxanium", sans-serif;
+  --sans: "Barlow", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+h1, h2, h3 { letter-spacing: 0.01em; }
+tr.sel, tr.sel:hover { background: #1E0B18; }
+
+/* ---- neon layer (design/option-b/admin/admin.css) ----
+   The admin styles its shell inside Svelte components (scoped classes), so the
+   selectors below repeat a class to win the tie; this sheet loads after the
+   admin's own. */
+.adm-top.adm-top { border-bottom: 2px solid transparent; border-image: linear-gradient(90deg, var(--amber), var(--violet) 50%, var(--green)) 1; }
+nav a[aria-current="page"][aria-current="page"] { text-shadow: 0 0 10px rgba(255, 46, 151, 0.55); }
+.wordmark.wordmark { color: var(--green); text-shadow: 0 0 12px rgba(57, 255, 136, 0.5); }
+.wordmark.wordmark b { color: var(--amber); text-shadow: 0 0 12px rgba(255, 46, 151, 0.6); }
+.theme-card.theme-card { border-radius: 2px; }
+.theme-card.on.on { box-shadow: 0 0 0 1px var(--amber), 0 0 24px rgba(255, 46, 151, 0.3); }
+.tile-num.accent { color: var(--green); text-shadow: 0 0 10px rgba(57, 255, 136, 0.45); }
+.bar-track span:not(.low) { background: var(--green); box-shadow: 0 0 8px rgba(57, 255, 136, 0.6); }
+.badge, .tabs, .tabs > *, .member-list li, .code-row, .btn-line, textarea { border-radius: 2px; }

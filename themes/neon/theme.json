@@ -1,0 +1,40 @@
+{
+  "$schema": "../../docs/dev/schemas/theme.schema.json",
+  "manifestVersion": 1,
+  "id": "neon",
+  "name": "Neon",
+  "description": "Hot pink and neon green on near-black, with a soft glow. Glows stay still for visitors who ask for reduced motion.",
+  "version": "1.0.0",
+  "author": "The Flagfall Authors",
+  "license": "Apache-2.0",
+  "flagfall": ">=0.1.0 <2.0.0",
+  "entry": "dist/index.html",
+  "adminStyle": "dist/admin.css",
+  "pages": {
+    "board": "/",
+    "challenge": "/challenges/:slug",
+    "scoreboard": "/scoreboard",
+    "teams": "/teams",
+    "team": "/teams/:id",
+    "page": "/p/:slug",
+    "signIn": "/sign-in",
+    "signUp": "/sign-up",
+    "account": "/account",
+    "announcements": "/announcements",
+    "notStarted": "/starting-soon",
+    "over": "/ended",
+    "resetPassword": "/reset-password"
+  },
+  "settings": [
+    { "key": "accent", "type": "color", "label": "Accent color", "group": "Colors", "default": "#FF2E97", "cssVar": "--amber", "contrastWith": "background" },
+    { "key": "background", "type": "color", "label": "Background", "group": "Colors", "default": "#07050D", "cssVar": "--bg" },
+    { "key": "wordmark", "type": "text", "label": "Wordmark", "help": "Characters { and } are drawn in the accent color.", "group": "Branding", "default": "flag{fall}", "maxLength": 32 },
+    { "key": "organizer", "type": "text", "label": "Organized by", "group": "Branding", "default": "[YOUR ORGANIZATION]", "maxLength": 80 },
+    { "key": "logo", "type": "image", "label": "Logo", "help": "Shown next to the wordmark instead of the flag mark. Square works best.", "group": "Branding", "accept": ["image/svg+xml", "image/png", "image/webp"], "maxBytes": 524288 },
+    { "key": "favicon", "type": "image", "label": "Favicon", "help": "The browser tab icon. Square SVG or PNG, 64×64 or larger.", "group": "Branding", "accept": ["image/svg+xml", "image/png"], "maxBytes": 131072 },
+    { "key": "signInHeadline", "type": "text", "label": "Sign-in headline", "group": "Wording", "default": "Break in.\nLeave a flag.", "multiline": true, "maxLength": 80 },
+    { "key": "boardTagline", "type": "text", "label": "Board tagline", "group": "Wording", "default": "Find the flag, submit it, score.", "maxLength": 120 },
+    { "key": "boardLayout", "type": "select", "label": "Challenge board layout", "group": "Layout", "default": "grid",
+      "options": [{ "value": "grid", "label": "Grid of tiles" }, { "value": "list", "label": "Compact list" }] }
+  ]
+}

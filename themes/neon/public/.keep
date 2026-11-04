@@ -1,0 +1,1 @@
+Keeps dist/ present in git so the Go embed compiles before the theme is built.
