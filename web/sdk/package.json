@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "typescript": "^5.9.0",
-    "vitest": "^3"
+    "vitest": "^4.1.12"
   },
   "main": "./src/index.ts",
   "exports": {
