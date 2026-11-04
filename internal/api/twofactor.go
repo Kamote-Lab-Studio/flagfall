@@ -15,8 +15,8 @@ import (
 
 	"rsc.io/qr"
 
-	"github.com/flagfall/flagfall/internal/auth"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/auth"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // Two-factor sign-in (TOTP). Optional for every account; the admin panel

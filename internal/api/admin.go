@@ -18,8 +18,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/uptrace/bun"
 
-	"github.com/flagfall/flagfall/internal/seed"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/seed"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // Staff roles, lowest first.

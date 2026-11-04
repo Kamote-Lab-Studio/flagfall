@@ -26,7 +26,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // CSP is sent with every theme response. See docs/dev/theme-manifest.md.

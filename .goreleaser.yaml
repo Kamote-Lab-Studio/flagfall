@@ -22,8 +22,8 @@ builds:
     flags: [-trimpath]
     ldflags:
       - -s -w
-      - -X github.com/flagfall/flagfall/internal/version.Version={{ .Version }}
-      - -X github.com/flagfall/flagfall/internal/version.Commit={{ .ShortCommit }}
+      - -X github.com/Kamote-Lab-Studio/flagfall/internal/version.Version={{ .Version }}
+      - -X github.com/Kamote-Lab-Studio/flagfall/internal/version.Commit={{ .ShortCommit }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
@@ -47,7 +47,7 @@ sboms:
 
 # Sign the checksum file with cosign, keyless (GitHub's OIDC identity).
 # Verify: cosign verify-blob --bundle checksums.txt.sigstore.json checksums.txt \
-#   --certificate-identity-regexp 'https://github.com/flagfall/flagfall/' \
+#   --certificate-identity-regexp 'https://github.com/Kamote-Lab-Studio/flagfall/' \
 #   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 signs:
   - cmd: cosign
@@ -61,7 +61,7 @@ changelog:
 
 release:
   github:
-    owner: flagfall
+    owner: Kamote-Lab-Studio
     name: flagfall
   draft: true
   prerelease: auto

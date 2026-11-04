@@ -5,7 +5,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/flagfall/flagfall/internal/themes"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
 )
 
 func manifestWith(fields string) fstest.MapFS {

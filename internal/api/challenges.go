@@ -13,11 +13,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/uptrace/bun"
 
-	"github.com/flagfall/flagfall/internal/blobs"
-	"github.com/flagfall/flagfall/internal/flags"
-	"github.com/flagfall/flagfall/internal/markdown"
-	"github.com/flagfall/flagfall/internal/scoring"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/blobs"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/flags"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/markdown"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/scoring"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 type challengeSummaryView struct {

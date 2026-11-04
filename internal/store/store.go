@@ -21,7 +21,7 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 	_ "modernc.org/sqlite" // pure-Go SQLite driver, keeps the binary static
 
-	"github.com/flagfall/flagfall/migrations"
+	"github.com/Kamote-Lab-Studio/flagfall/migrations"
 )
 
 // Dialect names the database engine.

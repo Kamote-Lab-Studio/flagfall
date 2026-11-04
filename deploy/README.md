@@ -43,7 +43,7 @@ with the development `compose.yaml` at the repository root.
   in the admin panel. Losing `flagfall-data` loses the secret key, which
   signs sessions and hashes flags.
 - **Upgrades:** set `FLAGFALL_IMAGE` to a release tag (for example
-  `ghcr.io/flagfall/flagfall:1.0.0`), then `docker compose pull && docker compose up -d`.
+  `ghcr.io/kamote-lab-studio/flagfall:1.0.0`), then `docker compose pull && docker compose up -d`.
   A version that changes the database backs it up to `/data/backups` first,
   and won't start while the event is running unless you confirm it
   (`docker compose run --rm flagfall migrate --during-event`). See
@@ -57,7 +57,7 @@ with the development `compose.yaml` at the repository root.
 
     docker run -d -p 8080:8080 -v flagfall-data:/data \
       -e FLAGFALL_PUBLIC_URL=https://ctf.example.org \
-      ghcr.io/flagfall/flagfall:latest
+      ghcr.io/kamote-lab-studio/flagfall:latest
 
 This uses SQLite in `/data`. Put a TLS proxy in front, and set
 `FLAGFALL_TRUST_PROXY=true` only when that proxy is the sole way in.
@@ -93,7 +93,7 @@ Push a tag like `v1.0.0`. `.github/workflows/release.yml` then:
 
 - builds the six binaries with GoReleaser (`.goreleaser.yaml`), with
   checksums, SBOMs and a keyless cosign signature, into a **draft** release;
-- builds and pushes the multi-arch image to `ghcr.io/flagfall/flagfall`
+- builds and pushes the multi-arch image to `ghcr.io/kamote-lab-studio/flagfall`
   (`1.0.0`, `1.0` and `latest`; tags with a `-`, like `v1.0.0-rc.1`, don't
   move `latest`) and signs it.
 

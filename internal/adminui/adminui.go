@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/flagfall/flagfall/internal/themes"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
 )
 
 // Handler serves the admin single-page app.

@@ -9,9 +9,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/flagfall/flagfall/internal/scoring"
-	"github.com/flagfall/flagfall/internal/services"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/scoring"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/services"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 func (a *API) mountAdminScoreboard(r chi.Router) {

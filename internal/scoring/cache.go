@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // Snapshot is a consistent set of boards computed from one load.

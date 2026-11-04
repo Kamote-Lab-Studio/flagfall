@@ -18,14 +18,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/flagfall/flagfall/internal/api"
-	"github.com/flagfall/flagfall/internal/blobs"
-	"github.com/flagfall/flagfall/internal/config"
-	"github.com/flagfall/flagfall/internal/flags"
-	"github.com/flagfall/flagfall/internal/live"
-	"github.com/flagfall/flagfall/internal/server"
-	"github.com/flagfall/flagfall/internal/store"
-	"github.com/flagfall/flagfall/internal/store/storetest"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/api"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/blobs"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/config"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/flags"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/live"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/server"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store/storetest"
 )
 
 // ---------------------------------------------------------------- harness

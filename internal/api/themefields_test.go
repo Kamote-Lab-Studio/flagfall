@@ -5,8 +5,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/flagfall/flagfall/internal/api"
-	"github.com/flagfall/flagfall/internal/themes"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/api"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
 )
 
 // mapEnv is an env whose active theme wants a location per challenge.

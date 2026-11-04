@@ -11,10 +11,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/flagfall/flagfall/internal/store"
-	"github.com/flagfall/flagfall/internal/store/storetest"
-	"github.com/flagfall/flagfall/internal/themes"
-	amberphosphor "github.com/flagfall/flagfall/themes/amber-phosphor"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store/storetest"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
+	amberphosphor "github.com/Kamote-Lab-Studio/flagfall/themes/amber-phosphor"
 )
 
 const manifest = `{"manifestVersion":1,"id":"demo","name":"Demo","version":"1.0.0","entry":"dist/index.html",` + pages + `,"settings":[

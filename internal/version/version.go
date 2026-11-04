@@ -1,6 +1,6 @@
 // Package version holds build information, set at link time:
 //
-//	go build -ldflags "-X github.com/flagfall/flagfall/internal/version.Version=1.0.0 -X github.com/flagfall/flagfall/internal/version.Commit=abc123"
+//	go build -ldflags "-X github.com/Kamote-Lab-Studio/flagfall/internal/version.Version=1.0.0 -X github.com/Kamote-Lab-Studio/flagfall/internal/version.Commit=abc123"
 package version
 
 var (

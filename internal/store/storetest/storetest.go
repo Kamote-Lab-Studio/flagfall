@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // New returns a migrated store that is closed when the test ends.

@@ -16,12 +16,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/backup"
-	"github.com/flagfall/flagfall/internal/blobs"
-	"github.com/flagfall/flagfall/internal/scoring"
-	"github.com/flagfall/flagfall/internal/seed"
-	"github.com/flagfall/flagfall/internal/store"
-	"github.com/flagfall/flagfall/internal/store/storetest"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/backup"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/blobs"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/scoring"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/seed"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store/storetest"
 )
 
 var ctx = context.Background()

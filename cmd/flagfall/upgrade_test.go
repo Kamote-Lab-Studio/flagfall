@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/blobs"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/blobs"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // oldInstall is a SQLite install at schema 4, with an event that starts at

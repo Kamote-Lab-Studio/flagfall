@@ -12,8 +12,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/flagfall/flagfall/internal/mail"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/mail"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // discordHosts are the only hosts a webhook may point at, so the setting
@@ -77,7 +77,7 @@ func (a *API) postDiscord(ctx context.Context, webhook string, payload []byte) e
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "Flagfall (https://github.com/flagfall/flagfall)")
+	req.Header.Set("User-Agent", "Flagfall (https://github.com/Kamote-Lab-Studio/flagfall)")
 	res, err := a.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("Discord didn't answer: %w", err)

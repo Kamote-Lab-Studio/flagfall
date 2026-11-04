@@ -16,14 +16,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/flagfall/flagfall/internal/blobs"
-	"github.com/flagfall/flagfall/internal/config"
-	"github.com/flagfall/flagfall/internal/live"
-	"github.com/flagfall/flagfall/internal/ratelimit"
-	"github.com/flagfall/flagfall/internal/scoring"
-	"github.com/flagfall/flagfall/internal/services"
-	"github.com/flagfall/flagfall/internal/store"
-	"github.com/flagfall/flagfall/internal/themes"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/blobs"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/config"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/live"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/ratelimit"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/scoring"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/services"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
 )
 
 // Mailer sends account emails. By default the API uses the SMTP settings

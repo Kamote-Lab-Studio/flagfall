@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/challenges"
-	"github.com/flagfall/flagfall/internal/themes"
-	"github.com/flagfall/flagfall/internal/themes/bundled"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/challenges"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes/bundled"
 )
 
 const challengesUsage = `usage:

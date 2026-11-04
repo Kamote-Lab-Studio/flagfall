@@ -3,8 +3,8 @@ package bundled_test
 import (
 	"testing"
 
-	"github.com/flagfall/flagfall/internal/themes"
-	"github.com/flagfall/flagfall/internal/themes/bundled"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes/bundled"
 )
 
 // Every bundled theme's manifest is valid and declares every required page.

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/config"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/config"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 func writeChallenge(t *testing.T, root, slug, flag string, value int) {

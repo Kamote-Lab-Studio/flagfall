@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 func (e *env) userID(name string) string {

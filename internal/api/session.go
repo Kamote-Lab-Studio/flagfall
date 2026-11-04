@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/auth"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/auth"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 const (

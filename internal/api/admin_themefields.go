@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/flagfall/flagfall/internal/store"
-	"github.com/flagfall/flagfall/internal/themes"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
 )
 
 // activeFields returns the active theme's id, name and challenge fields.

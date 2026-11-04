@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/flagfall/flagfall/internal/services"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/services"
 )
 
 // Challenge containers: the `service:` block in challenge.yml. Support staff

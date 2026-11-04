@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // staff signs up a user and gives them a role. If there's no owner yet, it

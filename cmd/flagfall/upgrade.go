@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/backup"
-	"github.com/flagfall/flagfall/internal/blobs"
-	"github.com/flagfall/flagfall/internal/store"
-	"github.com/flagfall/flagfall/internal/version"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/backup"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/blobs"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/version"
 )
 
 // errEventRunning stops an upgrade that would change the database mid-event.

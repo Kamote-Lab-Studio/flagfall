@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/store"
-	"github.com/flagfall/flagfall/internal/store/storetest"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store/storetest"
 )
 
 func TestMigrateAndRoundTrip(t *testing.T) {

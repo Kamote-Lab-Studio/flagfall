@@ -14,7 +14,7 @@
 You need [Docker](https://docs.docker.com/get-docker/) with Compose.
 
 ```sh
-git clone https://github.com/flagfall/flagfall
+git clone https://github.com/Kamote-Lab-Studio/flagfall
 cd flagfall
 docker compose up --build -d
 ```

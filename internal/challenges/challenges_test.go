@@ -9,12 +9,12 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/flagfall/flagfall/challenges/sample"
-	"github.com/flagfall/flagfall/internal/blobs"
-	"github.com/flagfall/flagfall/internal/challenges"
-	"github.com/flagfall/flagfall/internal/flags"
-	"github.com/flagfall/flagfall/internal/store"
-	"github.com/flagfall/flagfall/internal/store/storetest"
+	"github.com/Kamote-Lab-Studio/flagfall/challenges/sample"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/blobs"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/challenges"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/flags"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store/storetest"
 )
 
 var secret = []byte(strings.Repeat("k", 32))

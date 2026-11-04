@@ -8,8 +8,8 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/api"
-	"github.com/flagfall/flagfall/internal/themes"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/api"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
 )
 
 const testPages = `"pages":{"board":"/","challenge":"/c/:slug","scoreboard":"/s","teams":"/t","team":"/t/:id","page":"/p/:slug",` +

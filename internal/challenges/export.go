@@ -15,9 +15,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/flagfall/flagfall/internal/blobs"
-	"github.com/flagfall/flagfall/internal/flags"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/blobs"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/flags"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // RedactedFlag replaces exact flags on export: they're stored as hashes and

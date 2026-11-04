@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/flagfall/flagfall/internal/themes"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
 )
 
 func TestThemeFailureReports(t *testing.T) {

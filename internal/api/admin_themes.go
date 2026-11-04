@@ -15,8 +15,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/uptrace/bun"
 
-	"github.com/flagfall/flagfall/internal/store"
-	"github.com/flagfall/flagfall/internal/themes"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
 )
 
 // The Appearance section: installed themes, their settings drafts, preview,

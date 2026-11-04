@@ -25,9 +25,9 @@ import (
 	"github.com/uptrace/bun"
 	"gopkg.in/yaml.v3"
 
-	"github.com/flagfall/flagfall/internal/blobs"
-	"github.com/flagfall/flagfall/internal/flags"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/blobs"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/flags"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // Spec is a parsed challenge.yml.

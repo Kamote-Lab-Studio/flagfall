@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/flagfall/flagfall/internal/mail/mailtest"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/mail/mailtest"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 func TestSettingsAndEmail(t *testing.T) {

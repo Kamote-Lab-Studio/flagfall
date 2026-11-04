@@ -8,9 +8,9 @@ import (
 	"github.com/johannesboyne/gofakes3"
 	"github.com/johannesboyne/gofakes3/backend/s3mem"
 
-	"github.com/flagfall/flagfall/internal/api"
-	"github.com/flagfall/flagfall/internal/blobs"
-	"github.com/flagfall/flagfall/internal/config"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/api"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/blobs"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/config"
 )
 
 // s3Env is an env whose challenge files live in an in-memory S3 bucket.

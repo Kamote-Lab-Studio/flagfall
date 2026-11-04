@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/flagfall/flagfall/internal/themes"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
 )
 
 // ThemeFieldCheck is the result of CheckThemeFields.

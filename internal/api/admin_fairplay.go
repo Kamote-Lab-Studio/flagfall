@@ -11,7 +11,7 @@ import (
 
 	"github.com/uptrace/bun"
 
-	"github.com/flagfall/flagfall/internal/flags"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/flags"
 )
 
 // Fair-play checks behind the Submissions screen's side panel

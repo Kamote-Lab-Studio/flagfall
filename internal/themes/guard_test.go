@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/store"
-	"github.com/flagfall/flagfall/internal/store/storetest"
-	"github.com/flagfall/flagfall/internal/themes"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store/storetest"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
 )
 
 func TestGuardAndBrowserFallback(t *testing.T) {

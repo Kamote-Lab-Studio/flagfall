@@ -4,8 +4,8 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo 0.0.0-dev)
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LDFLAGS := -s -w \
-	-X github.com/flagfall/flagfall/internal/version.Version=$(VERSION) \
-	-X github.com/flagfall/flagfall/internal/version.Commit=$(COMMIT)
+	-X github.com/Kamote-Lab-Studio/flagfall/internal/version.Version=$(VERSION) \
+	-X github.com/Kamote-Lab-Studio/flagfall/internal/version.Commit=$(COMMIT)
 
 .PHONY: dev build build-go test e2e lint web-install web-build web-lint clean
 

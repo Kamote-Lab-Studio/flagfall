@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/auth"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/auth"
 )
 
 func TestTwoFactorSignIn(t *testing.T) {

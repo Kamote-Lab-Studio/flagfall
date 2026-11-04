@@ -13,8 +13,8 @@ import (
 
 	"github.com/uptrace/bun"
 
-	"github.com/flagfall/flagfall/internal/auth"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/auth"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 func validName(name string) string {

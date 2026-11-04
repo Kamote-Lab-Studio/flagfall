@@ -12,7 +12,7 @@ Intentionally vulnerable challenges in an event, or a specific event's configura
 
 ## Reporting
 
-Please **do not** open a public issue. Report privately through GitHub's [private vulnerability reporting](https://github.com/flagfall/flagfall/security/advisories/new).
+Please **do not** open a public issue. Report privately through GitHub's [private vulnerability reporting](https://github.com/Kamote-Lab-Studio/flagfall/security/advisories/new).
 
 If you can't use that, email eduardodbarrete@gmail.com with "Flagfall security" in the subject.
 

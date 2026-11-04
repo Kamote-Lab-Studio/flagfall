@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/scoring"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/scoring"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // JSON shapes match web/sdk/src/types.ts. IDs are strings.

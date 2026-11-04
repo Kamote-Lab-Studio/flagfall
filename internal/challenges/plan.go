@@ -11,8 +11,8 @@ import (
 
 	"github.com/uptrace/bun"
 
-	"github.com/flagfall/flagfall/internal/flags"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/flags"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // LoadFolder reads either one challenge folder (with challenge.yml at its

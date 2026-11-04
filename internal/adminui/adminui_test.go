@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/flagfall/flagfall/internal/adminui"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/adminui"
 )
 
 func router(files fstest.MapFS) http.Handler {

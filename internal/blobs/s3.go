@@ -11,7 +11,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"github.com/flagfall/flagfall/internal/config"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/config"
 )
 
 // RedirectTTL is how long a signed download link works.

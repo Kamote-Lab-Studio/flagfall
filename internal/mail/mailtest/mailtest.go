@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/mail"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/mail"
 )
 
 // Received is one delivered message.

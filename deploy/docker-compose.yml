@@ -14,7 +14,7 @@ name: flagfall-server
 
 services:
   flagfall:
-    image: ${FLAGFALL_IMAGE:-ghcr.io/flagfall/flagfall:latest}
+    image: ${FLAGFALL_IMAGE:-ghcr.io/kamote-lab-studio/flagfall:latest}
     restart: unless-stopped
     depends_on:
       db:

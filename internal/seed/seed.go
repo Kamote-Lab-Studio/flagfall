@@ -18,11 +18,11 @@ import (
 
 	"github.com/uptrace/bun"
 
-	"github.com/flagfall/flagfall/challenges/sample"
-	"github.com/flagfall/flagfall/internal/auth"
-	"github.com/flagfall/flagfall/internal/blobs"
-	"github.com/flagfall/flagfall/internal/challenges"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/challenges/sample"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/auth"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/blobs"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/challenges"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 //go:embed data/teams.json

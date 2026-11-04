@@ -46,7 +46,7 @@ ARG COMMIT=unknown
 ARG TARGETOS=linux
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath \
-      -ldflags "-s -w -X github.com/flagfall/flagfall/internal/version.Version=${VERSION} -X github.com/flagfall/flagfall/internal/version.Commit=${COMMIT}" \
+      -ldflags "-s -w -X github.com/Kamote-Lab-Studio/flagfall/internal/version.Version=${VERSION} -X github.com/Kamote-Lab-Studio/flagfall/internal/version.Commit=${COMMIT}" \
       -o /out/flagfall ./cmd/flagfall \
  && mkdir -p /out/data
 

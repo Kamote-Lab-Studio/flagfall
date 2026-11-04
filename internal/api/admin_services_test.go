@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/flagfall/flagfall/internal/api"
-	"github.com/flagfall/flagfall/internal/services"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/api"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/services"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // withService gives a challenge a stored service spec.

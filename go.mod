@@ -1,4 +1,4 @@
-module github.com/flagfall/flagfall
+module github.com/Kamote-Lab-Studio/flagfall
 
 go 1.26.0
 

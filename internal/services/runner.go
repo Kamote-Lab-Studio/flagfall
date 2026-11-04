@@ -20,9 +20,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/blobs"
-	"github.com/flagfall/flagfall/internal/challenges"
-	"github.com/flagfall/flagfall/internal/store"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/blobs"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/challenges"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/store"
 )
 
 // States a service can be in.

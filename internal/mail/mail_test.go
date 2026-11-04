@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flagfall/flagfall/internal/mail"
-	"github.com/flagfall/flagfall/internal/mail/mailtest"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/mail"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/mail/mailtest"
 )
 
 func TestSendThroughServer(t *testing.T) {

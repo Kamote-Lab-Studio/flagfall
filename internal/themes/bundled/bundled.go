@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"io/fs"
 
-	"github.com/flagfall/flagfall/internal/themes"
-	amberphosphor "github.com/flagfall/flagfall/themes/amber-phosphor"
-	"github.com/flagfall/flagfall/themes/neon"
-	"github.com/flagfall/flagfall/themes/starter"
+	"github.com/Kamote-Lab-Studio/flagfall/internal/themes"
+	amberphosphor "github.com/Kamote-Lab-Studio/flagfall/themes/amber-phosphor"
+	"github.com/Kamote-Lab-Studio/flagfall/themes/neon"
+	"github.com/Kamote-Lab-Studio/flagfall/themes/starter"
 )
 
 // packages are the embedded theme folders. Amber Phosphor, the default,
