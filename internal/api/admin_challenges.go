@@ -36,6 +36,9 @@ func (a *API) mountAdminChallenges(r chi.Router) {
 	r.Delete("/challenges/{id}", a.h(a.staff("author", a.adminDeleteChallenge)))
 	r.Post("/challenges/{id}/flags", a.h(a.staff("author", a.adminAddFlag)))
 	r.Delete("/challenges/{id}/flags/{flagID}", a.h(a.staff("author", a.adminDeleteFlag)))
+	r.Get("/challenges/{id}/team-flags", a.h(a.staff("author", a.adminListTeamFlags)))
+	r.Post("/challenges/{id}/team-flags", a.h(a.staff("author", a.adminGenerateTeamFlags)))
+	r.Delete("/challenges/{id}/team-flags", a.h(a.staff("author", a.adminDeleteTeamFlags)))
 	r.Put("/challenges/{id}/hints", a.h(a.staff("author", a.adminPutHints)))
 	r.Post("/challenges/{id}/files", a.h(a.staff("author", a.adminUploadFile)))
 	r.Delete("/challenges/{id}/files/{fileID}", a.h(a.staff("author", a.adminDeleteFile)))
@@ -94,8 +97,10 @@ type adminChallengeView struct {
 	// OtherThemeFields are stored keys the active theme doesn't use.
 	OtherThemeFields []string        `json:"otherThemeFields"`
 	Flags            []adminFlagView `json:"flags"`
-	Hints            []adminHintView `json:"hints"`
-	Files            []adminFileView `json:"files"`
+	// TeamFlags describes the per-team flags, which aren't listed in Flags.
+	TeamFlags *teamFlagsView  `json:"teamFlags"`
+	Hints     []adminHintView `json:"hints"`
+	Files     []adminFileView `json:"files"`
 }
 
 func (a *API) challengeStats(ctx context.Context) (map[int64]int, error) {
@@ -182,6 +187,14 @@ func (a *API) adminChallengeDetail(ctx context.Context, c *store.Challenge) (*ad
 		return nil, err
 	}
 	for _, f := range fl {
+		if f.Kind == flags.PerTeam {
+			if v.TeamFlags == nil {
+				v.TeamFlags = &teamFlagsView{}
+				v.TeamFlags.Prefix, v.TeamFlags.Suffix = splitFormat(deref(f.Format))
+			}
+			v.TeamFlags.Teams++
+			continue
+		}
 		v.Flags = append(v.Flags, adminFlagView{idStr(f.ID), f.Kind, f.Pattern})
 	}
 	var hs []struct {

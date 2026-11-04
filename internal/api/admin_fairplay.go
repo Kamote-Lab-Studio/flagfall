@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 	"time"
 
 	"github.com/uptrace/bun"
+
+	"github.com/flagfall/flagfall/internal/flags"
 )
 
 // Fair-play checks behind the Submissions screen's side panel
@@ -24,18 +27,24 @@ const (
 	rateLimitShare = 0.8
 	// How far back the rate check looks.
 	rateLookback = 15 * time.Minute
+	// Solves of one challenge by different teams this close together...
+	simulSolveWindow = 30 * time.Second
+	// ...among its first this many solves are worth a look (later on, popular
+	// challenges are solved every few seconds anyway).
+	simulSolveEarly = 10
 )
 
 type fairPlayAlert struct {
 	ID            string    `json:"id"`
-	Kind          string    `json:"kind"` // "shared-flag" or "rate-limit"
+	Kind          string    `json:"kind"` // "shared-flag", "rate-limit", "team-flag" or "simul-solve"
 	ChallengeID   idStr     `json:"challengeId"`
 	ChallengeName string    `json:"challengeName"`
 	Teams         []string  `json:"teams"`
 	TeamIDs       []idStr   `json:"teamIds"`
 	Count         int       `json:"count"`       // teams (shared-flag) or attempts in a minute (rate-limit)
 	Limit         int       `json:"limit"`       // rate-limit only
-	SpanSeconds   int       `json:"spanSeconds"` // shared-flag only: first to last of those attempts
+	SpanSeconds   int       `json:"spanSeconds"` // shared-flag and simul-solve: first to last
+	SameIP        bool      `json:"sameIp"`      // simul-solve: two of the solves came from one IP
 	At            time.Time `json:"at"`          // the latest attempt involved
 }
 
@@ -92,6 +101,22 @@ func (a *API) adminSubmissionsSummary(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 	alerts = append(alerts, sharedFlagAlerts(shared)...)
+
+	owners, err := a.teamFlagOwners(ctx)
+	if err != nil {
+		return err
+	}
+	alerts = append(alerts, teamFlagAlerts(shared, owners, a.cfg.Secret())...)
+
+	var solves []solveRow
+	if err := a.store.DB.NewSelect().TableExpr("solves AS s").
+		ColumnExpr("s.team_id, t.name AS team_name, s.challenge_id, c.name AS challenge_name, s.solved_at, sub.ip").
+		Join("JOIN teams AS t ON t.id = s.team_id").Join("JOIN challenges AS c ON c.id = s.challenge_id").
+		Join("LEFT JOIN submissions AS sub ON sub.id = s.submission_id").
+		OrderExpr("s.challenge_id, s.solved_at").Scan(ctx, &solves); err != nil {
+		return err
+	}
+	alerts = append(alerts, simulSolveAlerts(solves, now.Add(-sharedFlagLookback))...)
 
 	ev, err := a.store.LoadEvent(ctx)
 	if err != nil {
@@ -235,4 +260,126 @@ func teamsIn(rows []fairPlayRow) ([]string, []idStr) {
 		}
 	}
 	return names, ids
+}
+
+// teamFlagOwner is whose per-team flag a hash is.
+type teamFlagOwner struct {
+	TeamID   int64
+	TeamName string
+}
+
+type teamFlagKey struct {
+	challenge int64
+	hash      string
+}
+
+func (a *API) teamFlagOwners(ctx context.Context) (map[teamFlagKey]teamFlagOwner, error) {
+	var rows []struct {
+		ChallengeID int64  `bun:"challenge_id"`
+		TeamID      int64  `bun:"team_id"`
+		ValueHash   string `bun:"value_hash"`
+		TeamName    string `bun:"team_name"`
+	}
+	if err := a.store.DB.NewSelect().TableExpr("flags AS f").
+		ColumnExpr("f.challenge_id, f.team_id, f.value_hash, t.name AS team_name").
+		Join("JOIN teams AS t ON t.id = f.team_id").
+		Where("f.kind = ?", flags.PerTeam).Scan(ctx, &rows); err != nil {
+		return nil, err
+	}
+	out := make(map[teamFlagKey]teamFlagOwner, len(rows))
+	for _, r := range rows {
+		out[teamFlagKey{r.ChallengeID, r.ValueHash}] = teamFlagOwner{r.TeamID, r.TeamName}
+	}
+	return out, nil
+}
+
+// teamFlagAlerts finds wrong attempts that were another team's per-team flag:
+// that flag can only have come from that team. rows are oldest first.
+func teamFlagAlerts(rows []fairPlayRow, owners map[teamFlagKey]teamFlagOwner, secret []byte) []fairPlayAlert {
+	if len(owners) == 0 {
+		return nil
+	}
+	type key struct{ challenge, from, owner int64 }
+	byKey := map[key]*fairPlayAlert{}
+	var order []key
+	for _, r := range rows {
+		owner, ok := owners[teamFlagKey{r.ChallengeID, flags.Hash(secret, flags.Exact, r.Submitted)}]
+		if !ok || owner.TeamID == r.TeamID {
+			continue
+		}
+		k := key{r.ChallengeID, r.TeamID, owner.TeamID}
+		al := byKey[k]
+		if al == nil {
+			al = &fairPlayAlert{
+				ID:   "team-" + strconv.FormatInt(r.ChallengeID, 10) + "-" + strconv.FormatInt(r.TeamID, 10) + "-" + strconv.FormatInt(owner.TeamID, 10),
+				Kind: "team-flag", ChallengeID: idStr(r.ChallengeID), ChallengeName: r.ChallengeName,
+				Teams: []string{r.TeamName, owner.TeamName}, TeamIDs: []idStr{idStr(r.TeamID), idStr(owner.TeamID)},
+			}
+			byKey[k] = al
+			order = append(order, k)
+		}
+		al.Count++
+		al.At = r.SubmittedAt.UTC()
+	}
+	out := make([]fairPlayAlert, 0, len(order))
+	for _, k := range order {
+		out = append(out, *byKey[k])
+	}
+	return out
+}
+
+type solveRow struct {
+	TeamID        int64     `bun:"team_id"`
+	TeamName      string    `bun:"team_name"`
+	ChallengeID   int64     `bun:"challenge_id"`
+	ChallengeName string    `bun:"challenge_name"`
+	SolvedAt      time.Time `bun:"solved_at"`
+	IP            *string   `bun:"ip"`
+}
+
+// simulSolveAlerts finds a challenge's early solves (its first
+// simulSolveEarly) by different teams within simulSolveWindow of each other,
+// ending after since. rows are ordered by challenge, then time.
+func simulSolveAlerts(rows []solveRow, since time.Time) []fairPlayAlert {
+	var out []fairPlayAlert
+	for i := 0; i < len(rows); {
+		j := i
+		for j < len(rows) && rows[j].ChallengeID == rows[i].ChallengeID {
+			j++
+		}
+		early := rows[i:j]
+		if len(early) > simulSolveEarly {
+			early = early[:simulSolveEarly]
+		}
+		for k := 0; k < len(early); {
+			end := k + 1
+			for end < len(early) && early[end].SolvedAt.Sub(early[k].SolvedAt) <= simulSolveWindow {
+				end++
+			}
+			if g := early[k:end]; len(g) >= 2 && g[len(g)-1].SolvedAt.After(since) {
+				al := fairPlayAlert{
+					ID:   "simul-" + strconv.FormatInt(g[0].ChallengeID, 10) + "-" + strconv.FormatInt(g[0].SolvedAt.Unix(), 10),
+					Kind: "simul-solve", ChallengeID: idStr(g[0].ChallengeID), ChallengeName: g[0].ChallengeName,
+					Count:       len(g),
+					SpanSeconds: int(g[len(g)-1].SolvedAt.Sub(g[0].SolvedAt).Seconds()),
+					At:          g[len(g)-1].SolvedAt.UTC(),
+				}
+				ips := map[string]bool{}
+				for _, s := range g {
+					al.Teams = append(al.Teams, s.TeamName)
+					al.TeamIDs = append(al.TeamIDs, idStr(s.TeamID))
+					if s.IP != nil && *s.IP != "" {
+						if ips[*s.IP] {
+							al.SameIP = true
+						}
+						ips[*s.IP] = true
+					}
+				}
+				out = append(out, al)
+			}
+			k = end
+		}
+		i = j
+	}
+	return out
 }

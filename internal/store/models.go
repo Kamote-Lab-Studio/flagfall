@@ -154,6 +154,8 @@ type Flag struct {
 	ValueHash   *string `bun:"value_hash"`
 	Pattern     *string `bun:"pattern"`
 	TeamID      *int64  `bun:"team_id"`
+	// Format is the template a per-team flag was derived with (flag{%s}).
+	Format *string `bun:"format"`
 }
 
 type File struct {

@@ -70,3 +70,34 @@ func sortRows(rows []fairPlayRow) {
 		}
 	}
 }
+
+func TestSimulSolveAlerts(t *testing.T) {
+	t0 := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
+	ip := func(s string) *string { return &s }
+	s := func(team, chal int64, at time.Duration, addr *string) solveRow {
+		return solveRow{TeamID: team, TeamName: "t" + string(rune('0'+team)), ChallengeID: chal, ChallengeName: "Box", SolvedAt: t0.Add(at), IP: addr}
+	}
+	rows := []solveRow{
+		// Challenge 1: teams 1 and 2 solve 12 s apart from one IP; team 3 much later.
+		s(1, 1, 0, ip("10.0.0.5")), s(2, 1, 12*time.Second, ip("10.0.0.5")), s(3, 1, time.Hour, nil),
+		// Challenge 2: solves a few minutes apart.
+		s(1, 2, 0, nil), s(2, 2, 5*time.Minute, nil),
+	}
+	got := simulSolveAlerts(rows, t0.Add(-time.Hour))
+	if len(got) != 1 || got[0].ChallengeID != 1 || got[0].Count != 2 || got[0].SpanSeconds != 12 || !got[0].SameIP {
+		t.Fatalf("alerts = %+v", got)
+	}
+	// Too long ago.
+	if got := simulSolveAlerts(rows, t0.Add(time.Minute)); len(got) != 0 {
+		t.Fatalf("old solves raised %+v", got)
+	}
+	// Past the first simulSolveEarly solves, close solves are normal.
+	var many []solveRow
+	for i := 0; i < simulSolveEarly; i++ {
+		many = append(many, s(int64(i+1), 3, time.Duration(i)*time.Hour, nil))
+	}
+	many = append(many, s(50, 3, 9*time.Hour+time.Second, nil))
+	if got := simulSolveAlerts(many, t0.Add(-time.Hour)); len(got) != 0 {
+		t.Fatalf("late solves raised %+v", got)
+	}
+}

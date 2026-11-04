@@ -294,6 +294,16 @@ func (a *API) submitFlag(w http.ResponseWriter, r *http.Request) error {
 	if err := a.store.DB.NewSelect().Model(&stored).Where("challenge_id = ?", c.ID).Scan(ctx); err != nil {
 		return err
 	}
+	// A team that joined after per-team flags were made gets its own now.
+	if format, mine := teamFlagState(stored, team.ID); format != "" && !mine {
+		if _, err := a.ensureTeamFlags(ctx, a.store.DB, c.ID, format, team.ID); err != nil {
+			return err
+		}
+		stored = stored[:0]
+		if err := a.store.DB.NewSelect().Model(&stored).Where("challenge_id = ?", c.ID).Scan(ctx); err != nil {
+			return err
+		}
+	}
 	check := make([]flags.Flag, len(stored))
 	for i, f := range stored {
 		check[i] = flags.Flag{Kind: f.Kind, ValueHash: deref(f.ValueHash), Pattern: deref(f.Pattern), TeamID: f.TeamID}

@@ -21,6 +21,7 @@
     value: 0, dynamic: false, minValue: 0, decay: 10, state: "hidden", visibleFrom: "", tags: "", position: 0,
   });
   let flag = $state({ kind: "exact", value: "" });
+  let teamFormat = $state({ prefix: "flag{", suffix: "}" });
   let hints = $state<{ id?: string; cost: number; content: string; unlocks: number }[]>([]);
   let uploading = $state(false);
   let themeInfo = $state<ChallengeFields>({ theme: { id: "", name: "" }, fields: [] });
@@ -91,6 +92,27 @@
     }
   }
 
+  // Per-team flags: one flag per team, derived on the server.
+  async function generateTeamFlags(ev: SubmitEvent) {
+    ev.preventDefault();
+    try {
+      fill(await api.post<Challenge>(`/challenges/${id}/team-flags`, teamFormat));
+      notify("Every team has its own flag.");
+    } catch (err) {
+      notify(message(err), "error");
+    }
+  }
+
+  async function deleteTeamFlags() {
+    if (!confirm("Delete every team's flag for this challenge? Flags you've handed out stop working.")) return;
+    try {
+      await api.del(`/challenges/${id}/team-flags`);
+      await load();
+    } catch (err) {
+      notify(message(err), "error");
+    }
+  }
+
   async function saveHints() {
     try {
       fill(await api.put<Challenge>(`/challenges/${id}/hints`, hints.map((h) => ({ id: h.id, cost: h.cost, content: h.content }))));
@@ -148,7 +170,7 @@
   <p class="muted small"><span class="badge" class:ok={c.state === "visible"} class:warn={c.state === "hidden"}>{c.state}</span>
     <span class="mono">{c.solves} solves · {c.attempts} attempts · worth {c.currentValue} now</span></p>
 
-  {#if c.state === "visible" && c.flags.length === 0}
+  {#if c.state === "visible" && c.flags.length === 0 && !c.teamFlags}
     <div class="notice">This challenge is visible but has no flag, so nobody can solve it.</div>
   {/if}
   {#each c.themeFieldWarnings as w (w)}<div class="notice">{w}</div>{/each}
@@ -216,7 +238,7 @@
 
   <section class="panel pad stack" aria-labelledby="flags-title">
     <h2 id="flags-title">Flags</h2>
-    {#if c.flags.length === 0}<p class="empty">No flags yet.</p>{/if}
+    {#if c.flags.length === 0 && !c.teamFlags}<p class="empty">No flags yet.</p>{/if}
     <table>
       <tbody>
         {#each c.flags as f (f.id)}
@@ -237,6 +259,27 @@
         <button>Add flag</button>
       </form>
       <p class="hint">Exact and case-insensitive flags are stored hashed, so they can't be shown again.</p>
+    {/if}
+
+    <h3>Per-team flags</h3>
+    {#if c.teamFlags}
+      <p><span class="mono">{c.teamFlags.prefix}…{c.teamFlags.suffix}</span>, one for each of {c.teamFlags.teams} {c.teamFlags.teams === 1 ? "team" : "teams"}. Teams that join later get theirs too. A team that sends another team's flag shows up in Submissions.</p>
+      {#if editable}
+        <div class="btn-row">
+          <a class="btn-line" href={`/admin/api/v1/challenges/${id}/team-flags?format=csv`} download>Download team flags (CSV)</a>
+          <button type="button" class="small danger" onclick={deleteTeamFlags}>Delete per-team flags</button>
+        </div>
+      {/if}
+    {:else if editable}
+      <p class="hint">Give every team its own flag, for files or services you hand out per team. A flag that turns up from another team shows it was shared.</p>
+      <form class="toolbar" onsubmit={generateTeamFlags}>
+        <input class="mono" style="width:7rem;min-width:0" aria-label="Flag prefix" bind:value={teamFormat.prefix} />
+        <span class="mono muted">a1b2c3…</span>
+        <input class="mono" style="width:4rem;min-width:0" aria-label="Flag suffix" bind:value={teamFormat.suffix} />
+        <button>Generate for every team</button>
+      </form>
+    {:else}
+      <p class="empty">None.</p>
     {/if}
   </section>
 

@@ -25,7 +25,7 @@ export interface FileInfo { id: string; name: string; size: number; sha256: stri
 export interface Challenge extends ChallengeSummary {
   author: string; description: string; connection: string | null;
   minValue: number | null; decay: number | null; tags: string[];
-  themeFields: Record<string, unknown>; themeFieldWarnings: string[]; otherThemeFields: string[]; flags: Flag[]; hints: Hint[]; files: FileInfo[];
+  themeFields: Record<string, unknown>; themeFieldWarnings: string[]; otherThemeFields: string[]; flags: Flag[]; teamFlags: { prefix: string; suffix: string; teams: number } | null; hints: Hint[]; files: FileInfo[];
 }
 
 export interface User {
@@ -58,8 +58,8 @@ export interface Submission {
 }
 
 export interface FairPlayAlert {
-  id: string; kind: "shared-flag" | "rate-limit"; challengeId: string; challengeName: string;
-  teams: string[]; teamIds: string[]; count: number; limit: number; spanSeconds: number; at: string;
+  id: string; kind: "shared-flag" | "rate-limit" | "team-flag" | "simul-solve"; challengeId: string; challengeName: string;
+  teams: string[]; teamIds: string[]; count: number; limit: number; spanSeconds: number; sameIp: boolean; at: string;
 }
 
 export interface SubmissionSummary { total: number; correct: number; incorrect: number; alerts: FairPlayAlert[] }

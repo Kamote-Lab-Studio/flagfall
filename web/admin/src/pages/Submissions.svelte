@@ -157,6 +157,24 @@
             <button class="link muted small" onclick={() => dismiss(a)}>Dismiss</button>
           </div>
         </div>
+      {:else if a.kind === "team-flag"}
+        <div class="panel pad warn stack-s">
+          <b class="accent2">Another team's flag</b>
+          <p class="small">{a.teams[0]} sent {a.teams[1]}'s own flag for {a.challengeName}{a.count > 1 ? ` (${a.count} times)` : ""}. Per-team flags are unique, so it came from {a.teams[1]}.</p>
+          <div class="btn-row">
+            <a class="btn-line" href={href("/submissions" + qs({ teamId: a.teamIds[0], challengeId: a.challengeId }))}>See attempts</a>
+            <button class="link muted small" onclick={() => dismiss(a)}>Dismiss</button>
+          </div>
+        </div>
+      {:else if a.kind === "simul-solve"}
+        <div class="panel pad stack-s" class:warn={a.sameIp}>
+          <b class:accent2={a.sameIp}>Solved at nearly the same time</b>
+          <p class="small">{names(a.teams)} solved {a.challengeName} within {a.spanSeconds} {a.spanSeconds === 1 ? "second" : "seconds"}{a.sameIp ? ", two of them from the same IP address" : ""}. Early solves this close together can mean a shared answer.</p>
+          <div class="btn-row">
+            <a class="btn-line" href={href("/submissions" + qs({ challengeId: a.challengeId, correct: "true" }))}>See solves</a>
+            <button class="link muted small" onclick={() => dismiss(a)}>Dismiss</button>
+          </div>
+        </div>
       {:else}
         <div class="panel pad stack-s">
           <b>Close to the rate limit</b>
@@ -168,7 +186,7 @@
         </div>
       {/if}
     {:else}
-      <p class="panel pad muted small">Nothing looks off. Alerts appear here when several teams send the same wrong flag, or a team nears the flag rate limit.</p>
+      <p class="panel pad muted small">Nothing looks off. Alerts appear here when teams send the same wrong flag or another team's flag, solve a challenge at nearly the same time, or near the flag rate limit.</p>
     {/each}
   </aside>
 </div>

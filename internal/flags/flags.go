@@ -49,6 +49,16 @@ func Hash(secret []byte, kind, value string) string {
 	return hex.EncodeToString(m.Sum(nil))
 }
 
+// TeamValue derives a team's per-team flag for a challenge: the format with
+// its %s replaced by 24 hex characters of an HMAC keyed with the server
+// secret. The same inputs always give the same flag, so it can be shown again
+// without being stored; another server secret gives other flags.
+func TeamValue(secret []byte, challengeID, teamID int64, format string) string {
+	m := hmac.New(sha256.New, secret)
+	fmt.Fprintf(m, "flagfall-team-flag-v1\x00%d\x00%d", challengeID, teamID)
+	return strings.Replace(format, "%s", hex.EncodeToString(m.Sum(nil))[:24], 1)
+}
+
 // CompilePattern checks and compiles a pattern flag.
 func CompilePattern(p string) (*regexp.Regexp, error) {
 	re, err := regexp.Compile(`^(?:` + p + `)$`)

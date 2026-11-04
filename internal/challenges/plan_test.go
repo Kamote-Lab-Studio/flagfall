@@ -216,3 +216,43 @@ func TestPruneRetiresSolvedChallenges(t *testing.T) {
 		t.Error("prune removed solves")
 	}
 }
+
+func TestReimportKeepsPerTeamFlags(t *testing.T) {
+	db := storetest.New(t)
+	ctx := context.Background()
+	files := blobs.Local(t.TempDir())
+	specs, err := challenges.Load(pack("one"), ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := challenges.Apply(ctx, db, secret, files, specs); err != nil {
+		t.Fatal(err)
+	}
+	var c store.Challenge
+	if err := db.DB.NewSelect().Model(&c).Where("slug = ?", "one").Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+	bracket := &store.Bracket{Name: "Open"}
+	if _, err := db.DB.NewInsert().Model(bracket).Exec(ctx); err != nil {
+		t.Fatal(err)
+	}
+	team := &store.Team{Name: "xs", NameKey: "xs", InviteCode: "code-xs", BracketID: bracket.ID, CreatedAt: time.Now()}
+	if _, err := db.DB.NewInsert().Model(team).Exec(ctx); err != nil {
+		t.Fatal(err)
+	}
+	h, format := "hash", "f{%s}"
+	if _, err := db.DB.NewInsert().Model(&store.Flag{ChallengeID: c.ID, Kind: "per-team", ValueHash: &h, TeamID: &team.ID, Format: &format}).Exec(ctx); err != nil {
+		t.Fatal(err)
+	}
+	// The per-team flag isn't a change the pack would undo...
+	if plan, _ := challenges.MakePlan(ctx, db, secret, specs); len(plan.Unchanged) != 1 {
+		t.Fatalf("plan = %+v", plan)
+	}
+	// ...and a re-import keeps it.
+	if _, err := challenges.Apply(ctx, db, secret, files, specs); err != nil {
+		t.Fatal(err)
+	}
+	if n, _ := db.DB.NewSelect().Model((*store.Flag)(nil)).Where("challenge_id = ? AND team_id IS NOT NULL", c.ID).Count(ctx); n != 1 {
+		t.Fatalf("per-team flags after re-import = %d", n)
+	}
+}

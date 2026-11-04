@@ -299,7 +299,8 @@ type Result struct {
 }
 
 // Apply creates or updates the challenges by slug, in one transaction.
-// Files are stored in files by SHA-256. Flags and hints are replaced.
+// Files are stored in files by SHA-256. Flags and hints are replaced;
+// per-team flags, which the format can't express, are kept.
 func Apply(ctx context.Context, db *store.Store, secret []byte, files *blobs.Store, specs []*Spec) (Result, error) {
 	var res Result
 	for _, s := range specs {
@@ -335,10 +336,12 @@ func Apply(ctx context.Context, db *store.Store, secret []byte, files *blobs.Sto
 				if _, err := tx.NewUpdate().Model(c).WherePK().ExcludeColumn("id", "created_at", "position").Exec(ctx); err != nil {
 					return err
 				}
-				for _, m := range []any{(*store.Flag)(nil), (*store.File)(nil)} {
-					if _, err := tx.NewDelete().Model(m).Where("challenge_id = ?", c.ID).Exec(ctx); err != nil {
-						return err
-					}
+				// Per-team flags aren't in the format, so a re-import keeps them.
+				if _, err := tx.NewDelete().Model((*store.Flag)(nil)).Where("challenge_id = ? AND team_id IS NULL", c.ID).Exec(ctx); err != nil {
+					return err
+				}
+				if _, err := tx.NewDelete().Model((*store.File)(nil)).Where("challenge_id = ?", c.ID).Exec(ctx); err != nil {
+					return err
 				}
 				// Hints are replaced only when they changed, so unlocks survive re-imports.
 				res.Updated = append(res.Updated, s.Slug)

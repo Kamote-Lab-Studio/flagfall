@@ -125,8 +125,8 @@ func diff(ctx context.Context, db bun.IDB, secret []byte, s *Spec, c *store.Chal
 	add(want.ThemeFields != c.ThemeFields, "theme_fields")
 	add(deref(want.Service) != deref(c.Service), "service")
 
-	var fl []store.Flag
-	if err := db.NewSelect().Model(&fl).Where("challenge_id = ?", c.ID).Scan(ctx); err != nil {
+	var fl []store.Flag // per-team flags aren't in the format, and import keeps them
+	if err := db.NewSelect().Model(&fl).Where("challenge_id = ? AND team_id IS NULL", c.ID).Scan(ctx); err != nil {
 		return nil, err
 	}
 	var have, need []string
