@@ -55,9 +55,11 @@ export async function start() {
   document.documentElement.lang = theme.locale;
   // The server already put cssVar settings on :root; nothing to do for colors.
 
-  ff.live.on("scoreboard", () => app.version.scoreboard++);
-  ff.live.on("solve", () => app.version.challenges++);
-  ff.live.on("challenge-updated", () => app.version.challenges++);
+  // refetch() waits a moment and folds bursts of events into one call, so
+  // a thousand open tabs don't all hit the server at once. Use on() only
+  // for things shown at once (a toast, a banner).
+  ff.live.refetch(["scoreboard"], () => app.version.scoreboard++);
+  ff.live.refetch(["solve", "challenge-updated"], () => app.version.challenges++);
   ff.live.on("announcement", () => app.version.announcements++);
   ff.live.on("event-state", () => refreshEvent());
   ff.live.on("resync", () => {

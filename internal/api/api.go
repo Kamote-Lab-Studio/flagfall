@@ -253,6 +253,9 @@ func (a *API) h(fn handler) http.HandlerFunc {
 		if errors.Is(err, sql.ErrNoRows) {
 			err = errNotFound
 		}
+		if errors.Is(err, context.Canceled) && r.Context().Err() != nil {
+			return // the client went away; nobody is waiting for an answer
+		}
 		var ae *apiError
 		if !errors.As(err, &ae) {
 			a.log.Error("request failed", "method", r.Method, "path", r.URL.Path, "err", err)

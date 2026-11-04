@@ -139,6 +139,15 @@ export interface LiveConnection {
    * subscribing replaces that behaviour.
    */
   on<T extends LiveEventType | "resync">(type: T, handler: (data: T extends LiveEventType ? LiveEventData<T> : Record<string, never>) => void): () => void;
+  /**
+   * Refetch something when any of these events arrive. Use this instead of
+   * on() for anything that calls the API: fn runs once, 1 to 4 seconds (at
+   * random) after the first event, however many arrive meanwhile. With a
+   * thousand players watching, every tab refetching on every event at the
+   * same instant is what overloads a server at the start of an event. Keep
+   * on() for things shown at once, such as toasts. Returns an unsubscribe.
+   */
+  refetch(types: (LiveEventType | "resync")[], fn: () => void): () => void;
   readonly status: LiveStatus;
   onStatus(handler: (status: LiveStatus) => void): () => void;
   close(): void;

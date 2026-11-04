@@ -79,15 +79,15 @@
     })();
 
     ff.live.onStatus((s) => (app.liveOpen = s === "open"));
-    ff.live.on("scoreboard", () => {
+    // Refetches wait a moment and fold bursts together (see live.refetch).
+    ff.live.refetch(["scoreboard"], () => {
       app.scoreVersion++;
       if (app.me?.team) refreshMe();
     });
+    ff.live.refetch(["solve", "challenge-updated"], () => app.challengeVersion++);
     ff.live.on("solve", (s) => {
       if (s.firstBlood) toast("First blood", `${s.teamName} solved ${s.challengeSlug}`);
-      app.challengeVersion++;
     });
-    ff.live.on("challenge-updated", () => app.challengeVersion++);
     ff.live.on("announcement", (a) => {
       toast(a.title, "New announcement");
       app.announcementVersion++;

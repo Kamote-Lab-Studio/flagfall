@@ -3,7 +3,9 @@ package api
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"time"
 
@@ -50,6 +52,12 @@ func (a *API) sessionMiddleware(next http.Handler) http.Handler {
 		idHash := hashToken(c.Value)
 		sess := new(store.Session)
 		if err := a.store.DB.NewSelect().Model(sess).Where("id_hash = ?", idHash).Scan(ctx); err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				// The database is busy or down: fail this request but keep
+				// the cookie, so a hiccup doesn't sign everyone out.
+				a.fail(w, r, err)
+				return
+			}
 			a.clearSessionCookie(w)
 			next.ServeHTTP(w, r)
 			return
@@ -62,7 +70,10 @@ func (a *API) sessionMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		user := new(store.User)
-		if err := a.store.DB.NewSelect().Model(user).Where("id = ?", sess.UserID).Scan(ctx); err != nil || user.BannedAt != nil {
+		if err := a.store.DB.NewSelect().Model(user).Where("id = ?", sess.UserID).Scan(ctx); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			a.fail(w, r, err)
+			return
+		} else if err != nil || user.BannedAt != nil {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -152,4 +163,11 @@ func (a *API) generalLimit(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// fail answers a request that middleware couldn't serve because of a
+// server-side error (usually the database), and logs it.
+func (a *API) fail(w http.ResponseWriter, r *http.Request, err error) {
+	a.log.Error("request failed", "method", r.Method, "path", r.URL.Path, "err", err)
+	writeError(w, err)
 }

@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"net/http"
 	"net/mail"
 	"strings"
@@ -90,6 +92,9 @@ func (a *API) signIn(w http.ResponseWriter, r *http.Request) error {
 
 	user := new(store.User)
 	err := a.store.DB.NewSelect().Model(user).Where("email_key = ?", emailKey).Scan(ctx)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err // not "wrong password": the database didn't answer
+	}
 	hash := ""
 	if err == nil {
 		hash = user.PasswordHash

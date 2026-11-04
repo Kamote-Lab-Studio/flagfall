@@ -123,6 +123,38 @@ describe("live", () => {
   });
 });
 
+describe("live.refetch", () => {
+  it("folds a burst of events into one call, a few seconds later", async () => {
+    vi.useFakeTimers();
+    const listeners = new Map<string, (ev: { data: string }) => void>();
+    class FakeES {
+      readyState = 1;
+      onopen: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      addEventListener(type: string, fn: (ev: { data: string }) => void) {
+        listeners.set(type, fn);
+      }
+      close() {}
+    }
+    const ff = createClient({ EventSource: FakeES as unknown as typeof EventSource });
+    const fn = vi.fn();
+    const off = ff.live.refetch(["solve", "scoreboard"], fn);
+    await vi.advanceTimersByTimeAsync(0);
+    for (let i = 0; i < 50; i++) listeners.get(i % 2 ? "solve" : "scoreboard")!({ data: "{}" });
+    await vi.advanceTimersByTimeAsync(999);
+    expect(fn).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(3001);
+    expect(fn).toHaveBeenCalledTimes(1);
+    // After unsubscribing, a pending call is dropped too.
+    listeners.get("solve")!({ data: "{}" });
+    off();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(fn).toHaveBeenCalledTimes(1);
+    ff.live.close();
+    vi.useRealTimers();
+  });
+});
+
 describe("preview", () => {
   const info = { id: "neon", version: 2, settings: {}, preview: true, locale: "en", messages: {} };
 

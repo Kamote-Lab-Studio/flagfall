@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing/fstest"
+	"time"
 
 	"github.com/pressly/goose/v3"
 	"github.com/uptrace/bun"
@@ -37,6 +38,10 @@ type Store struct {
 	Dialect Dialect
 }
 
+// pgMaxConns caps open PostgreSQL connections per server. Twenty keeps
+// several replicas under PostgreSQL's default limit of 100.
+const pgMaxConns = 20
+
 // Open connects to the database named by a sqlite:// or postgres:// URL.
 //
 // SQLite URLs: sqlite://path/to/file.db, or sqlite://:memory: for tests.
@@ -52,6 +57,13 @@ func Open(ctx context.Context, dbURL string) (*Store, error) {
 		s, err = openSQLite(strings.TrimPrefix(dbURL, "sqlite://"))
 	case "postgres", "postgresql":
 		sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dbURL)))
+		// A bounded pool that stays open. Without it, a burst opens a new
+		// connection per request (a new PostgreSQL process each), which
+		// costs more than the queries and runs into connect timeouts.
+		// Requests over the limit wait for a free connection instead.
+		sqldb.SetMaxOpenConns(pgMaxConns)
+		sqldb.SetMaxIdleConns(pgMaxConns)
+		sqldb.SetConnMaxIdleTime(5 * time.Minute)
 		s = &Store{DB: bun.NewDB(sqldb, pgdialect.New()), Dialect: Postgres}
 	default:
 		return nil, fmt.Errorf("unsupported database scheme %q", u.Scheme)

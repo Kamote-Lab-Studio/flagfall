@@ -2,6 +2,10 @@ import type { LiveConnection, LiveStatus } from "./index.js";
 
 type Handler = (data: any) => void;
 
+// live.refetch() waits REFETCH_MIN plus up to REFETCH_SPREAD milliseconds.
+const REFETCH_MIN = 1000;
+const REFETCH_SPREAD = 3000;
+
 const EVENT_TYPES = ["scoreboard", "solve", "announcement", "challenge-updated", "event-state", "theme-published", "resync"] as const;
 
 /**
@@ -68,7 +72,22 @@ export function createLive(url: string, ES: typeof EventSource | undefined): Liv
     }, delay);
   };
 
-  return {
+  const live: LiveConnection = {
+    refetch(types, fn) {
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const fire = () => {
+        timer = null;
+        fn();
+      };
+      const schedule = () => {
+        if (timer === null) timer = setTimeout(fire, REFETCH_MIN + Math.random() * REFETCH_SPREAD);
+      };
+      const offs = types.map((t) => live.on(t, schedule));
+      return () => {
+        offs.forEach((off) => off());
+        if (timer !== null) clearTimeout(timer);
+      };
+    },
     on(type, handler) {
       let set = handlers.get(type);
       if (!set) handlers.set(type, (set = new Set()));
@@ -90,4 +109,5 @@ export function createLive(url: string, ES: typeof EventSource | undefined): Liv
       setStatus("closed");
     },
   };
+  return live;
 }
