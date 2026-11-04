@@ -45,8 +45,8 @@
   type DemoKind = "player" | "organizer";
   const demos = $derived(
     [
-      { kind: "player" as DemoKind, title: "Player", what: "Team captain of a sample team. Solve challenges, see the scoreboard.", login: app.event?.demoAccount ?? null },
-      { kind: "organizer" as DemoKind, title: "Organizer", what: "Owner account. Opens the admin panel to manage the event.", login: app.event?.demoAdmin ?? null },
+      { kind: "player" as DemoKind, title: "Player", login: app.event?.demoAccount ?? null },
+      { kind: "organizer" as DemoKind, title: "Organizer", login: app.event?.demoAdmin ?? null },
     ].filter((d) => d.login),
   );
   let picked = $state<DemoKind | null>(null);
@@ -121,16 +121,10 @@ connected to {app.event?.name ?? "flagfall"}
         {#if demos.length}
           <section class="demo" aria-labelledby="demo-title">
             <h2 id="demo-title">Try the demo</h2>
-            <p>This is a demo install. Pick an account to fill in the form, then sign in:</p>
             <div class="demo-choices" role="radiogroup" aria-labelledby="demo-title">
               {#each demos as d (d.kind)}
                 <button type="button" class="demo-choice" role="radio" aria-checked={picked === d.kind} onclick={() => useDemo(d.kind)}>
                   <b>{d.title}</b>
-                  <span>{d.what}</span>
-                  <dl>
-                    <dt>Email</dt><dd><code>{d.login?.email}</code></dd>
-                    <dt>Password</dt><dd><code>{d.login?.password}</code></dd>
-                  </dl>
                 </button>
               {/each}
             </div>

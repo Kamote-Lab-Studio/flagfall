@@ -326,18 +326,12 @@ textarea { min-height: 96px; padding: 10px 14px; background: var(--panel); borde
 /* sign-in: demo account panel (demo installs only) */
 .demo { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; background: var(--amber-bg); border: 1px dashed var(--amber-line); border-radius: 6px; color: var(--amber-2); font-size: 14px; }
 .demo h2 { font-family: var(--display); font-size: 16px; color: var(--amber); }
-.form-card .demo p { margin: 0; }
-.demo dl { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
-.demo dt { color: var(--muted); font-size: 12px; }
-.demo dd { margin: 0 0 6px; overflow-wrap: anywhere; }
-.demo code { color: var(--text); }
-.demo-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-.demo-choice { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; padding: 12px 14px; background: transparent; color: var(--amber-2); border: 1px solid var(--amber-line); border-radius: 6px; font: inherit; font-size: 13px; cursor: pointer; }
+.demo-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.demo-choice { display: flex; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 12px 14px; background: transparent; color: var(--amber-2); border: 1px solid var(--amber-line); border-radius: 6px; font: inherit; font-size: 13px; cursor: pointer; }
 .demo-choice:hover { border-color: var(--amber); }
 .demo-choice:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 .demo-choice[aria-checked="true"] { border-color: var(--amber); background: var(--amber-bg); box-shadow: inset 0 0 0 1px var(--amber); }
 .demo-choice b { color: var(--amber); font-family: var(--display); font-size: 15px; }
-.demo-choice dl { margin-top: 4px; width: 100%; }
 
 /* ---- neon layer (design/option-b/styles.css) ---- */
 .top { border-bottom: 2px solid transparent; border-image: linear-gradient(90deg, var(--amber), var(--violet) 50%, var(--green)) 1; }

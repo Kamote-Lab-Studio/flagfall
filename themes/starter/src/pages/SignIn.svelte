@@ -83,9 +83,8 @@
     {@const demoAdmin = app.event.demoAdmin}
     <section class="card" aria-labelledby="demo">
       <h2 id="demo">Try the demo</h2>
-      <p>This is a demo install. Pick an account to fill in the form:</p>
-      {#if demoPlayer}<button type="button" class="secondary" onclick={() => fill(demoPlayer)}>Player ({demoPlayer.email})</button>{/if}
-      {#if demoAdmin}<button type="button" class="secondary" onclick={() => fill(demoAdmin)}>Organizer ({demoAdmin.email})</button>{/if}
+      {#if demoPlayer}<button type="button" class="secondary" onclick={() => fill(demoPlayer)}>Player</button>{/if}
+      {#if demoAdmin}<button type="button" class="secondary" onclick={() => fill(demoAdmin)}>Organizer</button>{/if}
     </section>
   {/if}
 {/if}
