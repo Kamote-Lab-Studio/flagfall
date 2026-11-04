@@ -39,6 +39,16 @@ Themes change the whole player site, not just its colors, and the admin panel fo
 
 To build your own, copy `themes/starter` and read the [theme manifest](docs/dev/theme-manifest.md) and [SDK](docs/dev/sdk.md) docs.
 
+## Known limitations
+
+Flagfall is pre-alpha: try it, break it, and [tell us](https://github.com/Kamote-Lab-Studio/flagfall/issues/new/choose), but don't run an important event on it yet.
+
+- **One event per install.** To run another event, start a fresh install and import your challenges (`flagfall challenges export` / `import`).
+- **Two themes** (Amber Phosphor and Neon) of the nine planned for 1.0, plus a bare starter theme for theme authors.
+- **One server.** No Helm chart or multi-replica setup yet. One server handles about 1,000 players with PostgreSQL ([load test](loadtest/README.md)).
+- **English only**, with a partial Filipino translation.
+- **No releases yet**, so the quick start builds the image from source. Database changes between versions are migrated automatically, with a backup first, but there's no upgrade promise before 1.0.
+
 ## Developing
 
 You need [Go 1.26+](https://go.dev/dl/), [Node 22+](https://nodejs.org/) and [pnpm 9](https://pnpm.io/).
