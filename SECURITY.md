@@ -14,7 +14,7 @@ Intentionally vulnerable challenges in an event, or a specific event's configura
 
 Please **do not** open a public issue. Report privately through GitHub's [private vulnerability reporting](https://github.com/flagfall/flagfall/security/advisories/new).
 
-<!-- TODO (decisions.md D-07): add a security contact email before the repo is public. -->
+If you can't use that, email eduardodbarrete@gmail.com with "Flagfall security" in the subject.
 
 Include the version, steps to reproduce, and the impact you see. We'll acknowledge within 3 working days.
 
