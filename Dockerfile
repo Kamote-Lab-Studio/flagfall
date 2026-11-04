@@ -5,11 +5,16 @@
 #
 #   docker build -t flagfall .
 #   docker run -p 8080:8080 -v flagfall-data:/data flagfall
+#
+# Multi-arch: the front ends and the Go binary are built on the build
+# machine's own platform (Go cross-compiles; nothing needs emulation):
+#
+#   docker buildx build --platform linux/amd64,linux/arm64 -t flagfall .
 
 # ---- front ends (themes + admin panel) ----
 # Every bundled theme (internal/themes/bundled) needs its package.json and
 # dist/ copied here.
-FROM node:22-alpine AS web
+FROM --platform=$BUILDPLATFORM node:22-alpine AS web
 WORKDIR /src
 RUN corepack enable
 # Manifests first, so dependency installs are cached until they change.
@@ -27,7 +32,7 @@ COPY themes/ themes/
 RUN pnpm --filter "@flagfall/admin" --filter "@flagfall/theme-*" build
 
 # ---- server binary ----
-FROM golang:1.27-alpine AS go
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS go
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -38,7 +43,9 @@ COPY --from=web /src/themes/neon/dist/ themes/neon/dist/
 COPY --from=web /src/themes/starter/dist/ themes/starter/dist/
 ARG VERSION=0.0.0-dev
 ARG COMMIT=unknown
-RUN CGO_ENABLED=0 go build -trimpath \
+ARG TARGETOS=linux
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath \
       -ldflags "-s -w -X github.com/flagfall/flagfall/internal/version.Version=${VERSION} -X github.com/flagfall/flagfall/internal/version.Commit=${COMMIT}" \
       -o /out/flagfall ./cmd/flagfall \
  && mkdir -p /out/data

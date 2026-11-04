@@ -1,0 +1,70 @@
+# Flagfall for a public server: Flagfall + PostgreSQL + Caddy, which gets
+# and renews the HTTPS certificate on its own.
+#
+#   cd deploy
+#   cp .env.example .env        # set FLAGFALL_DOMAIN and POSTGRES_PASSWORD
+#   docker compose up -d
+#   docker compose logs flagfall   # the setup code for /admin
+#
+# Point the domain's DNS at this server and open ports 80 and 443 first.
+# See deploy/README.md.
+
+# Its own project name, so it never shares volumes with the dev compose.yaml.
+name: flagfall-server
+
+services:
+  flagfall:
+    image: ${FLAGFALL_IMAGE:-ghcr.io/flagfall/flagfall:latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLAGFALL_PUBLIC_URL: https://${FLAGFALL_DOMAIN:?set FLAGFALL_DOMAIN in .env}
+      FLAGFALL_DATABASE_URL: postgres://flagfall:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/flagfall?sslmode=disable
+      # Caddy is the only way in, so its X-Forwarded-For is the client address.
+      FLAGFALL_TRUST_PROXY: "true"
+    # No published port: only Caddy reaches Flagfall.
+    expose:
+      - "8080"
+    volumes:
+      # The secret key and uploaded files. Back this up with the database.
+      - flagfall-data:/data
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flagfall
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: flagfall
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flagfall -d flagfall"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - flagfall-pg:/var/lib/postgresql/data
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - flagfall
+    environment:
+      FLAGFALL_DOMAIN: ${FLAGFALL_DOMAIN:?set FLAGFALL_DOMAIN in .env}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates live here; keep this volume so Caddy doesn't ask again.
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  flagfall-data:
+  flagfall-pg:
+  caddy-data:
+  caddy-config:

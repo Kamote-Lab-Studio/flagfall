@@ -1,0 +1,15 @@
+# Caddy in front of Flagfall (deploy/docker-compose.yml). Caddy gets the
+# certificate for FLAGFALL_DOMAIN and redirects HTTP to HTTPS on its own.
+#
+# To get certificate expiry notices, add a global block at the top:
+#   {
+#   	email you@example.org
+#   }
+
+{$FLAGFALL_DOMAIN} {
+	encode zstd gzip
+	# Live scoreboard updates are a long-lived stream; send them right away.
+	reverse_proxy flagfall:8080 {
+		flush_interval -1
+	}
+}

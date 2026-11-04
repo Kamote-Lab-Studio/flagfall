@@ -1,0 +1,67 @@
+# Release binaries for six targets, with checksums, SBOMs and keyless
+# signatures. Run by .github/workflows/release.yml when a v* tag is pushed;
+# try it locally with `goreleaser release --snapshot --clean`.
+version: 2
+
+project_name: flagfall
+
+before:
+  hooks:
+    # The themes and admin panel are embedded in the binary: build them first.
+    - pnpm install --frozen-lockfile
+    - pnpm --filter "@flagfall/admin" --filter "@flagfall/theme-*" build
+
+builds:
+  - id: flagfall
+    main: ./cmd/flagfall
+    binary: flagfall
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X github.com/flagfall/flagfall/internal/version.Version={{ .Version }}
+      - -X github.com/flagfall/flagfall/internal/version.Commit={{ .ShortCommit }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: flagfall
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE*
+      - README.md
+      - deploy/README.md
+
+checksum:
+  name_template: checksums.txt
+
+# An SPDX SBOM per archive (needs syft on the PATH).
+sboms:
+  - artifacts: archive
+
+# Sign the checksum file with cosign, keyless (GitHub's OIDC identity).
+# Verify: cosign verify-blob --bundle checksums.txt.sigstore.json checksums.txt \
+#   --certificate-identity-regexp 'https://github.com/flagfall/flagfall/' \
+#   --certificate-oidc-issuer https://token.actions.githubusercontent.com
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args: ["sign-blob", "--bundle=${signature}", "${artifact}", "--yes"]
+    artifacts: checksum
+
+changelog:
+  use: github
+  sort: asc
+
+release:
+  github:
+    owner: flagfall
+    name: flagfall
+  draft: true
+  prerelease: auto
